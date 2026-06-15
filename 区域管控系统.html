@@ -1,0 +1,1705 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>区域管控 · 扩容修复 + 三级条形列表</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI','微软雅黑',system-ui,sans-serif; }
+        body { background:#0a0a12; color:#eef2ff; min-height:100vh; }
+        .login-page { display:flex; justify-content:center; align-items:center; min-height:100vh; background:linear-gradient(135deg, #0f0c29, #302b63, #24243e); position:relative; overflow:hidden; }
+        .login-page::before { content:""; position:absolute; width:200%; height:200%; background:radial-gradient(circle at 20% 50%, rgba(79,111,175,0.15) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(245,175,25,0.1) 0%, transparent 50%); animation:floatBg 8s infinite alternate; }
+        @keyframes floatBg { 0%{transform:translate(0,0);} 100%{transform:translate(-5%,-5%);} }
+        .login-container { position:relative; width:400px; background:rgba(20,20,35,0.8); backdrop-filter:blur(20px); border-radius:32px; padding:40px 30px; box-shadow:0 20px 50px rgba(0,0,0,0.6),0 0 0 1px rgba(255,255,255,0.1); text-align:center; z-index:1; }
+        .login-container h2 { margin-bottom:8px; color:#fff; font-weight:600; font-size:2rem; letter-spacing:2px; }
+        .login-container .subtitle { color:#aaa; margin-bottom:30px; font-size:0.9rem; }
+        .input-group { position:relative; margin-bottom:20px; }
+        .input-group .input-icon { position:absolute; left:15px; top:50%; transform:translateY(-50%); color:#8aaaff; font-size:1.2rem; }
+        .login-container input { width:100%; padding:14px 20px 14px 45px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:60px; color:white; font-size:1rem; outline:none; transition:0.3s; }
+        .login-container input:focus { border-color:#4f6faf; background:rgba(255,255,255,0.12); }
+        .login-container button { width:100%; padding:14px; margin-top:15px; background:linear-gradient(90deg, #4f6faf, #6b8fd4); border:none; border-radius:60px; color:white; font-weight:bold; font-size:1.1rem; cursor:pointer; transition:0.3s; box-shadow:0 4px 15px rgba(79,111,175,0.4); }
+        .login-container button:hover { box-shadow:0 6px 20px rgba(79,111,175,0.6); }
+        .switch { margin-top:20px; font-size:0.9rem; color:#8aaaff; cursor:pointer; text-decoration:none; }
+        .switch:hover { color:#aabbff; text-decoration:underline; }
+        .remember-me { display:flex; align-items:center; justify-content:flex-start; gap:8px; margin:15px 0 0; color:#ccc; font-size:0.9rem; cursor:pointer; }
+        .remember-me input { width:18px; height:18px; margin:0; cursor:pointer; }
+        .error-msg { color:#ff7b72; margin-top:12px; font-size:0.9rem; }
+        .app-wrapper { max-width:1600px; margin:0 auto; padding:20px; }
+        .app-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; background:#12121c; padding:12px 24px; border-radius:60px; flex-wrap:wrap; }
+        .user-info { display:flex; align-items:center; gap:20px; }
+        .logout-btn { background:#38384c; border:none; padding:6px 18px; border-radius:40px; cursor:pointer; color:white; }
+        .quick-nav { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:15px; background:#1c1c2a; padding:10px 20px; border-radius:60px; }
+        .quick-nav button { border:none; border-radius:40px; padding:8px 26px; font-weight:bold; cursor:pointer; font-size:0.95rem; color:white; background:#4f6faf; transition:0.2s; }
+        .quick-nav button.active-brand { background:#f5af19; color:#000; }
+        .quick-nav .vip-btn { background:linear-gradient(135deg,#f5af19,#f12711); margin-left:auto; }
+        .quick-nav .mall-btn { background:#6c5ce7; }
+        .quick-nav .extra-btn { background:#2c3e50; }
+        .global-search { background:#1c1c2a; border-radius:60px; padding:8px 20px; margin-bottom:20px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+        .global-search input { flex:2; background:#2a2a38; border:1px solid #424256; padding:10px 18px; border-radius:60px; color:white; font-size:0.9rem; outline:none; }
+        .global-search button { background:#4f6faf; border:none; padding:10px 24px; border-radius:60px; color:white; font-weight:bold; cursor:pointer; }
+        .search-results { background:#12121c; border-radius:28px; padding:16px; margin-bottom:20px; max-height:400px; overflow-y:auto; }
+        .search-result-item { background:#1e1e2c; margin:8px 0; padding:12px 16px; border-radius:20px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:0.15s; }
+        .search-result-item:hover { background:#2a2a3c; }
+        .mode-bar { display:flex; justify-content:center; gap:20px; margin-bottom:20px; }
+        .mode-btn { background:#2c2c3a; border:none; padding:10px 32px; border-radius:60px; font-size:1rem; font-weight:bold; cursor:pointer; color:#ccc; transition:0.2s; }
+        .mode-btn.active { background:#4f6faf; color:white; box-shadow:0 0 8px #4f6faf; }
+        .admin-tabs { display:flex; gap:12px; margin-bottom:20px; border-bottom:1px solid #2c2c3c; padding-bottom:10px; flex-wrap:wrap; align-items:center; }
+        .admin-tab { background:none; border:none; padding:8px 20px; border-radius:40px; color:#ccc; cursor:pointer; position:relative; }
+        .admin-tab.active { background:#4f6faf; color:white; }
+        .badge { background:#f12711; color:white; border-radius:30px; padding:2px 8px; font-size:0.7rem; margin-left:6px; }
+        .brand-selector { margin-left:auto; display:flex; gap:6px; }
+        .brand-selector button { border:none; border-radius:30px; padding:5px 14px; font-size:0.8rem; cursor:pointer; background:#2c2c3a; color:#ccc; }
+        .brand-selector button.active-brand { background:#f5af19; color:#000; }
+        .main-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:20px; margin-bottom:35px; }
+        .area-card { background:#181824; border-radius:28px; padding:16px 12px; display:flex; flex-direction:column; gap:12px; border:1px solid #2c2c3c; }
+        .area-name-input, .area-name-display { background:#252532; border:1px solid #3e3e52; border-radius:60px; padding:10px 12px; text-align:center; color:white; font-size:0.9rem; outline:none; }
+        .enter-area-btn { background:linear-gradient(95deg,#2a3b60,#1e2a46); border:none; padding:12px 8px; border-radius:40px; font-weight:bold; cursor:pointer; color:white; }
+        .level-page { background:#12121c; border-radius:32px; padding:20px 24px; border:1px solid #2a2a3a; margin-top:10px; }
+        .nav-bar { display:flex; align-items:center; gap:15px; flex-wrap:wrap; margin-bottom:20px; background:#1c1c28; padding:10px 18px; border-radius:60px; }
+        .nav-btn { background:#38384c; border:none; padding:8px 20px; border-radius:40px; color:white; cursor:pointer; }
+        .breadcrumb { font-size:0.9rem; color:#b9c8ff; background:#0f0f1a; padding:6px 16px; border-radius:32px; }
+        .operate-bar { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:24px; background:#1e1e2c; padding:16px 20px; border-radius:28px; align-items:flex-end; }
+        .operate-bar input { background:#2a2a38; border:1px solid #424256; padding:8px 14px; border-radius:48px; color:white; outline:none; }
+        .btn-primary { background:#2c7e4a; padding:8px 22px; border-radius:40px; border:none; color:white; cursor:pointer; }
+        .sub-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:18px; margin-top:10px; }
+        .node-card { background:#1e1e2c; border-radius:24px; padding:16px; border:1px solid #33334a; display:flex; flex-direction:column; gap:12px; }
+        .node-name { font-size:1.2rem; font-weight:bold; text-align:center; padding:8px 0; background:#2a2a3c; border-radius:50px; }
+        .list-view { display:flex; flex-direction:column; gap:12px; margin-top:10px; }
+        .node-list-item { background:#1e1e2c; border-radius:20px; padding:12px 16px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; border-left:4px solid #4f6faf; }
+        .list-name { font-weight:bold; min-width:140px; font-size:1rem; }
+        .list-status { min-width:80px; }
+        .list-countdown { font-family:monospace; background:#00000040; padding:4px 10px; border-radius:28px; font-weight:bold; min-width:140px; text-align:center; }
+        .list-actions { display:flex; flex-wrap:wrap; gap:6px; }
+        .list-actions button { border:none; border-radius:32px; padding:5px 12px; font-size:0.7rem; font-weight:bold; cursor:pointer; }
+        .ban-badge { background:#c45138; padding:4px 12px; border-radius:40px; display:inline-block; color:white; font-weight:bold; }
+        .unban-badge { background:#308a6e; padding:4px 12px; border-radius:40px; display:inline-block; color:white; }
+        .countdown-text { font-family:monospace; background:#00000060; padding:5px 8px; border-radius:28px; text-align:center; font-weight:bold; }
+        .countdown-red { color:#ff7b72; background:#3c2020; }
+        .countdown-green { color:#8effb2; background:#1e3a2a; }
+        .card-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:6px; }
+        .card-actions button { border:none; border-radius:32px; padding:5px 10px; font-size:0.7rem; font-weight:bold; cursor:pointer; }
+        .btn-ban-card { background:#c45138; color:white; }
+        .btn-unban-card { background:#308a6e; color:white; }
+        .btn-sub-card { background:#4a6ea8; color:white; }
+        .btn-enter-card { background:#8f6bb3; color:white; }
+        .btn-edit-card { background:#d9952e; color:white; }
+        .btn-time-card { background:#6c5ce7; color:white; }
+        .btn-del-card { background:#6a6a84; color:white; }
+        .empty-tip { text-align:center; padding:40px; background:#1c1c28; border-radius:32px; color:#aaa; }
+        .reminder-note { font-size:0.7rem; margin-top:20px; text-align:center; color:#9aa7dd; }
+        .audit-panel,.user-panel,.profile-panel { background:#1c1c2a; border-radius:28px; padding:16px; margin-top:20px; border:1px solid #3a3a50; }
+        .audit-item,.user-item,.log-item { background:#252535; margin:10px 0; padding:12px; border-radius:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+        .btn-approve { background:#2c7e4a; color:white; margin:0 4px; padding:4px 12px; border-radius:30px; border:none; cursor:pointer; }
+        .btn-reject { background:#a33; color:white; }
+        .btn-edit-user { background:#d9952e; color:white; padding:4px 12px; border-radius:30px; border:none; cursor:pointer; }
+        .btn-delete-user { background:#a33; color:white; padding:4px 12px; border-radius:30px; border:none; cursor:pointer; }
+        .btn-member { background:#f5af19; color:black; padding:4px 12px; border-radius:30px; border:none; cursor:pointer; font-weight:bold; }
+        .btn-demote { background:#6a6a84; color:white; padding:4px 12px; border-radius:30px; border:none; cursor:pointer; }
+        .online-badge { background:#2c7e4a; padding:2px 8px; border-radius:20px; font-size:0.7rem; }
+        .offline-badge { background:#6a6a84; padding:2px 8px; border-radius:20px; font-size:0.7rem; }
+        .vip-badge { background:linear-gradient(135deg,#f5af19,#f12711); padding:2px 8px; border-radius:20px; font-size:0.7rem; color:white; }
+        .trial-badge { background:linear-gradient(135deg,#1abc9c,#3498db); padding:2px 8px; border-radius:20px; font-size:0.7rem; color:white; }
+        .user-stats { margin-bottom:15px; font-size:0.9rem; background:#2a2a3a; padding:8px 15px; border-radius:40px; display:inline-block; }
+        .profile-form { display:flex; flex-direction:column; gap:15px; max-width:400px; }
+        .profile-form input { background:#2a2a38; border:1px solid #424256; padding:10px; border-radius:48px; color:white; }
+        .modal-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; justify-content:center; align-items:center; z-index:999; }
+        .modal-content { background:#1e1e2c; padding:24px; border-radius:32px; text-align:center; max-width:90%; box-shadow:0 0 30px rgba(0,0,0,0.6); }
+        .modal-content img { max-width:250px; max-height:250px; border-radius:16px; }
+        .modal-close { background:#4f6faf; border:none; padding:8px 24px; border-radius:40px; color:white; margin-top:15px; cursor:pointer; }
+        .switch-container { display:flex; align-items:center; gap:10px; margin:15px 0; }
+        .toggle-switch { position:relative; display:inline-block; width:60px; height:30px; }
+        .toggle-switch input { display:none; }
+        .slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#6a6a84; transition:0.4s; border-radius:30px; }
+        .slider:before { position:absolute; content:""; height:22px; width:22px; left:4px; bottom:4px; background-color:white; transition:0.4s; border-radius:50%; }
+        input:checked + .slider { background-color:#2c7e4a; }
+        input:checked + .slider:before { transform:translateX(30px); }
+        .home-hero { background:linear-gradient(135deg, #1a1a2e, #16213e); border-radius:32px; padding:60px 30px; margin-bottom:30px; position:relative; overflow:hidden; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px; }
+        .home-hero::before { content:""; position:absolute; top:-50%; left:-50%; width:200%; height:200%; background:radial-gradient(circle at 30% 70%, rgba(79,111,175,0.2) 0%, transparent 50%); animation:heroFloat 10s infinite alternate; }
+        @keyframes heroFloat { 0%{transform:translate(0,0);} 100%{transform:translate(2%,2%);} }
+        .hero-left { position:relative; z-index:1; flex:2; }
+        .hero-left h1 { font-size:3rem; font-weight:700; margin-bottom:20px; }
+        .hero-left p { font-size:1.2rem; color:#aaa; margin-bottom:30px; }
+        .hero-right { position:relative; z-index:1; flex:1; background:rgba(0,0,0,0.4); backdrop-filter:blur(10px); border-radius:28px; padding:20px; border:1px solid rgba(255,255,255,0.2); }
+        .hero-right h3 { margin-bottom:12px; font-size:1.3rem; color:#f5af19; display:flex; align-items:center; gap:8px; }
+        .hero-right .announcement-content { font-size:0.95rem; line-height:1.5; word-break:break-word; max-height:150px; overflow-y:auto; padding-right:5px; }
+        .home-btn-enter { background:linear-gradient(90deg, #f5af19, #f12711); border:none; padding:14px 40px; border-radius:60px; font-weight:bold; font-size:1.2rem; color:white; cursor:pointer; display:inline-block; }
+        .ad-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px; margin-bottom:40px; }
+        .ad-card { background:#181824; border-radius:28px; overflow:hidden; border:1px solid #2c2c3c; transition:0.2s; cursor:pointer; }
+        .ad-card:hover { transform:translateY(-5px); box-shadow:0 10px 20px rgba(0,0,0,0.4); }
+        .ad-card img { width:100%; height:180px; object-fit:cover; border-bottom:1px solid #2c2c3c; }
+        .ad-card-body { padding:15px; }
+        .ad-card h3 { margin-bottom:8px; }
+        .ad-card p { font-size:0.9rem; color:#aaa; }
+        .help-buttons { display:flex; gap:20px; justify-content:center; flex-wrap:wrap; margin-bottom:30px; }
+        .help-btn { background:#2c3e50; border:none; padding:15px 30px; border-radius:40px; font-weight:bold; font-size:1.1rem; color:white; cursor:pointer; transition:0.2s; display:flex; align-items:center; gap:10px; }
+        .help-btn:hover { background:#3e5060; }
+        .help-btn img { width:30px; height:30px; border-radius:50%; }
+        .btn-jump-log { background:#8f6bb3; color:white; padding:4px 12px; border-radius:30px; border:none; cursor:pointer; font-size:0.7rem; }
+        .btn-delete-log { background:#a33; color:white; padding:4px 12px; border-radius:30px; border:none; cursor:pointer; font-size:0.7rem; margin-left:6px; }
+        @media (max-width:700px) {
+            .sub-grid { grid-template-columns:1fr; }
+            .operate-bar { flex-direction:column; align-items:stretch; }
+            .quick-nav { justify-content:center; }
+            .home-hero { flex-direction:column; text-align:center; }
+            .hero-right { width:100%; }
+            .node-list-item { flex-direction:column; align-items:flex-start; }
+            .list-actions { margin-top:8px; }
+        }
+    </style>
+</head>
+<body>
+<div id="appContainer"></div>
+ <script>
+    (function() {
+        const BRANDS = ['shengshi', 'chuangshi', 'wansheng', 'jiasheng'];
+        const BRAND_NAMES = { shengshi: '万盛', chuangshi: '创世', wansheng: '盛世', jiasheng: '嘉盛' };
+        let currentBrand = 'shengshi';
+        let currentPage = 'home';
+
+        const STORAGE_USERS = "system_users";
+        const STORAGE_CURRENT_USER = "current_user";
+        const STORAGE_LAST_ACTIVE = "user_last_active";
+        const STORAGE_PENDING = "area_pending_renames";
+        const STORAGE_QR_URL = "membership_qr_url";
+        const STORAGE_VIP_PRICE = "vip_price_usdt";
+        const STORAGE_MALL_URL = "mall_url";
+        const STORAGE_MEMBERSHIP_ENABLED = "membership_enabled";
+        const STORAGE_EXTRA_LINKS = ["extra_link1", "extra_link2", "extra_link3", "extra_link4"];
+        const STORAGE_DIRECT_RENAME = "allow_direct_rename";
+        const STORAGE_HOME_ADS = "home_ads";
+        const STORAGE_HOME_HELP = "home_help_buttons";
+        const STORAGE_REMEMBERED_USER = "remembered_user";
+        const STORAGE_OPERATION_LOGS = "operation_logs";
+        const STORAGE_LAST_LOG_VIEW = "last_log_view_time";
+        const STORAGE_ANNOUNCEMENT = "home_announcement";
+        const TOTAL_AREAS = 32;
+        const TRIAL_DAYS = 7;
+
+        function brandKey(baseKey) { return `${baseKey}_${currentBrand}`; }
+
+        function addOperationLog(operation, details, areaId = null, nodeId = null) {
+            const user = getCurrentUser();
+            if (!user) return;
+            const logs = JSON.parse(localStorage.getItem(STORAGE_OPERATION_LOGS) || "[]");
+            logs.unshift({
+                id: Date.now(),
+                username: user.username,
+                timestamp: new Date().toISOString(),
+                brand: currentBrand,
+                areaId: areaId,
+                nodeId: nodeId,
+                operation: operation,
+                details: details
+            });
+            if (logs.length > 1000) logs.pop();
+            localStorage.setItem(STORAGE_OPERATION_LOGS, JSON.stringify(logs));
+            if (getCurrentUser()?.role === 'admin') updateLogBadge();
+        }
+
+        function getOperationLogs() {
+            return JSON.parse(localStorage.getItem(STORAGE_OPERATION_LOGS) || "[]");
+        }
+
+        function deleteLogById(logId) {
+            let logs = getOperationLogs();
+            logs = logs.filter(log => log.id !== logId);
+            localStorage.setItem(STORAGE_OPERATION_LOGS, JSON.stringify(logs));
+            if (getCurrentUser()?.role === 'admin') {
+                renderLogsPanel();
+                updateLogBadge();
+            }
+        }
+
+        function getUnreadLogCount() {
+            const lastView = localStorage.getItem(STORAGE_LAST_LOG_VIEW) || 0;
+            const logs = getOperationLogs();
+            return logs.filter(log => new Date(log.timestamp) > new Date(parseInt(lastView))).length;
+        }
+
+        function markLogsAsRead() {
+            localStorage.setItem(STORAGE_LAST_LOG_VIEW, Date.now().toString());
+            updateLogBadge();
+        }
+
+        function updateLogBadge() {
+            const badgeSpan = document.getElementById("logBadge");
+            if (!badgeSpan) return;
+            const unread = getUnreadLogCount();
+            if (unread > 0) {
+                badgeSpan.innerText = unread;
+                badgeSpan.style.display = "inline-block";
+            } else {
+                badgeSpan.style.display = "none";
+            }
+        }
+
+        function getAnnouncement() {
+            return localStorage.getItem(STORAGE_ANNOUNCEMENT) || "欢迎使用区域管控系统！如有问题请联系管理员。";
+        }
+        function setAnnouncement(content) {
+            localStorage.setItem(STORAGE_ANNOUNCEMENT, content);
+        }
+
+        // 关键修复：强制初始化正确的用户数据，确保 51888666 存在
+        function initStorage() {
+            // 先确保用户数据存在且包含正确的管理员
+            let users = [];
+            if (localStorage.getItem(STORAGE_USERS)) {
+                try {
+                    users = JSON.parse(localStorage.getItem(STORAGE_USERS));
+                    if (!Array.isArray(users)) users = [];
+                } catch(e) { users = []; }
+            }
+            // 检查是否有 51888666 管理员
+            const hasAdmin = users.some(u => u.username === '51888666' && u.role === 'admin');
+            if (!hasAdmin) {
+                // 如果没有，强制覆盖为用户初始数据
+                users = [
+                    { username: "51888666", password: "51888666", role: "admin", membership: false, freeTrialEnd: 0 },
+                    { username: "user", password: "user123", role: "user", membership: false, freeTrialEnd: 0 }
+                ];
+                localStorage.setItem(STORAGE_USERS, JSON.stringify(users));
+            } else {
+                // 已有管理员，但可能缺少字段，补充
+                let updated = false;
+                for (let u of users) {
+                    if (u.membership === undefined) { u.membership = false; updated = true; }
+                    if (u.freeTrialEnd === undefined) { u.freeTrialEnd = 0; updated = true; }
+                }
+                if (updated) localStorage.setItem(STORAGE_USERS, JSON.stringify(users));
+            }
+            // 其余初始化
+            if (!localStorage.getItem(STORAGE_LAST_ACTIVE)) localStorage.setItem(STORAGE_LAST_ACTIVE, "{}");
+            if (!localStorage.getItem(STORAGE_QR_URL)) localStorage.setItem(STORAGE_QR_URL, "");
+            if (!localStorage.getItem(STORAGE_VIP_PRICE)) localStorage.setItem(STORAGE_VIP_PRICE, "10");
+            if (!localStorage.getItem(STORAGE_MALL_URL)) localStorage.setItem(STORAGE_MALL_URL, "#");
+            if (localStorage.getItem(STORAGE_MEMBERSHIP_ENABLED) === null) {
+                localStorage.setItem(STORAGE_MEMBERSHIP_ENABLED, "false");
+            }
+            STORAGE_EXTRA_LINKS.forEach(key => { if (!localStorage.getItem(key)) localStorage.setItem(key, ""); });
+            if (localStorage.getItem(STORAGE_DIRECT_RENAME) === null) {
+                localStorage.setItem(STORAGE_DIRECT_RENAME, "false");
+            }
+            if (!localStorage.getItem(STORAGE_HOME_ADS)) {
+                const defaultAds = [];
+                for (let i = 0; i < 6; i++) {
+                    defaultAds.push({ image: "", title: "广告位 " + (i+1), desc: "描述内容", link: "" });
+                }
+                localStorage.setItem(STORAGE_HOME_ADS, JSON.stringify(defaultAds));
+            }
+            if (!localStorage.getItem(STORAGE_HOME_HELP)) {
+                const defaultHelp = [
+                    { text: "新手指南", image: "", content: "欢迎使用区域封禁管控计时系统，点击各品牌即可浏览区域信息。", link: "" },
+                    { text: "联系我们", image: "", content: "如需帮助，请发送邮件至 support@example.com", link: "" }
+                ];
+                localStorage.setItem(STORAGE_HOME_HELP, JSON.stringify(defaultHelp));
+            }
+            if (!localStorage.getItem(STORAGE_OPERATION_LOGS)) localStorage.setItem(STORAGE_OPERATION_LOGS, "[]");
+            if (!localStorage.getItem(STORAGE_LAST_LOG_VIEW)) localStorage.setItem(STORAGE_LAST_LOG_VIEW, "0");
+            if (!localStorage.getItem(STORAGE_ANNOUNCEMENT)) localStorage.setItem(STORAGE_ANNOUNCEMENT, "欢迎使用区域管控系统！如有问题请联系管理员。");
+            BRANDS.forEach(brand => {
+                const key = `areaBtnNameList_${brand}`;
+                if (!localStorage.getItem(key)) {
+                    localStorage.setItem(key, JSON.stringify(Array(TOTAL_AREAS).fill("📁 区域")));
+                }
+                for (let i = 1; i <= TOTAL_AREAS; i++) {
+                    const dataKey = `areaTree_v9_${brand}_${i}`;
+                    if (!localStorage.getItem(dataKey)) {
+                        const prov = JSON.parse(localStorage.getItem(key))[i-1];
+                        localStorage.setItem(dataKey, JSON.stringify([{ id: 1, name: prov, parent: "", banDay: 3, startTime: null, isBan: false, lastState: false }]));
+                    }
+                }
+                const pendingKey = `${STORAGE_PENDING}_${brand}`;
+                if (!localStorage.getItem(pendingKey)) localStorage.setItem(pendingKey, "[]");
+            });
+        }
+
+        function getUsers() {
+            return JSON.parse(localStorage.getItem(STORAGE_USERS) || "[]").map(u => ({
+                ...u, membership: u.membership || false, freeTrialEnd: u.freeTrialEnd || 0
+            }));
+        }
+        function saveUsers(users) { localStorage.setItem(STORAGE_USERS, JSON.stringify(users)); }
+        function updateActiveTime(username) {
+            const activeMap = JSON.parse(localStorage.getItem(STORAGE_LAST_ACTIVE) || "{}");
+            activeMap[username] = Date.now();
+            localStorage.setItem(STORAGE_LAST_ACTIVE, JSON.stringify(activeMap));
+        }
+        function getOnlineUsers() {
+            const activeMap = JSON.parse(localStorage.getItem(STORAGE_LAST_ACTIVE) || "{}");
+            const now = Date.now();
+            return Object.keys(activeMap).filter(u => now - activeMap[u] < 60000);
+        }
+        function register(username, password, role = "user") {
+            const users = getUsers();
+            if (users.find(u => u.username === username)) return false;
+            const trialEnd = isMembershipSystemEnabled() ? Date.now() + TRIAL_DAYS * 86400000 : 0;
+            users.push({ username, password, role, membership: false, freeTrialEnd: trialEnd });
+            saveUsers(users);
+            return true;
+        }
+        function login(username, password, remember = false) {
+            const users = getUsers();
+            const user = users.find(u => u.username === username && u.password === password);
+            if (user) {
+                const userInfo = {
+                    username: user.username,
+                    role: user.role,
+                    membership: user.membership,
+                    freeTrialEnd: user.freeTrialEnd
+                };
+                sessionStorage.setItem(STORAGE_CURRENT_USER, JSON.stringify(userInfo));
+                if (remember) {
+                    localStorage.setItem(STORAGE_REMEMBERED_USER, JSON.stringify({ username: user.username }));
+                } else {
+                    localStorage.removeItem(STORAGE_REMEMBERED_USER);
+                }
+                updateActiveTime(username);
+                return user;
+            }
+            return null;
+        }
+        function logout() {
+            sessionStorage.removeItem(STORAGE_CURRENT_USER);
+            localStorage.removeItem(STORAGE_REMEMBERED_USER);
+            window.location.reload();
+        }
+        function autoLoginFromRemembered() {
+            const remembered = localStorage.getItem(STORAGE_REMEMBERED_USER);
+            if (!remembered) return null;
+            try {
+                const { username } = JSON.parse(remembered);
+                const users = getUsers();
+                const user = users.find(u => u.username === username);
+                if (user) {
+                    const userInfo = {
+                        username: user.username,
+                        role: user.role,
+                        membership: user.membership,
+                        freeTrialEnd: user.freeTrialEnd
+                    };
+                    sessionStorage.setItem(STORAGE_CURRENT_USER, JSON.stringify(userInfo));
+                    updateActiveTime(username);
+                    return user;
+                } else {
+                    localStorage.removeItem(STORAGE_REMEMBERED_USER);
+                    return null;
+                }
+            } catch(e) { return null; }
+        }
+        function getCurrentUser() {
+            const raw = sessionStorage.getItem(STORAGE_CURRENT_USER);
+            return raw ? JSON.parse(raw) : null;
+        }
+        function isMembershipSystemEnabled() {
+            return localStorage.getItem(STORAGE_MEMBERSHIP_ENABLED) !== "false";
+        }
+        function setMembershipSystemEnabled(enabled) {
+            localStorage.setItem(STORAGE_MEMBERSHIP_ENABLED, enabled ? "true" : "false");
+        }
+        function isMembershipActive(user) {
+            if (!user) return false;
+            if (user.role === 'admin') return true;
+            if (!isMembershipSystemEnabled()) return true;
+            if (user.membership) return true;
+            if (user.freeTrialEnd && Date.now() < user.freeTrialEnd) return true;
+            return false;
+        }
+        function updateUserPassword(username, oldPassword, newPassword) {
+            const users = getUsers();
+            const idx = users.findIndex(u => u.username === username);
+            if (idx === -1) return false;
+            if (users[idx].password !== oldPassword) return false;
+            users[idx].password = newPassword;
+            saveUsers(users);
+            return true;
+        }
+        function updateUserRole(username, newRole) {
+            const users = getUsers();
+            const idx = users.findIndex(u => u.username === username);
+            if (idx === -1) return false;
+            users[idx].role = newRole;
+            saveUsers(users);
+            const cur = getCurrentUser();
+            if (cur && cur.username === username) {
+                cur.role = newRole;
+                sessionStorage.setItem(STORAGE_CURRENT_USER, JSON.stringify(cur));
+            }
+            return true;
+        }
+        function updateUserMembership(username, isMember) {
+            const users = getUsers();
+            const idx = users.findIndex(u => u.username === username);
+            if (idx === -1) return false;
+            users[idx].membership = isMember;
+            saveUsers(users);
+            if (getCurrentUser()?.username === username) {
+                const cur = getCurrentUser();
+                cur.membership = isMember;
+                sessionStorage.setItem(STORAGE_CURRENT_USER, JSON.stringify(cur));
+            }
+            return true;
+        }
+        function deleteUser(username) {
+            if (username === 'admin') return false;
+            const users = getUsers().filter(u => u.username !== username);
+            saveUsers(users);
+            const activeMap = JSON.parse(localStorage.getItem(STORAGE_LAST_ACTIVE) || "{}");
+            delete activeMap[username];
+            localStorage.setItem(STORAGE_LAST_ACTIVE, JSON.stringify(activeMap));
+            return true;
+        }
+        function getQrUrl() { return localStorage.getItem(STORAGE_QR_URL) || ""; }
+        function setQrUrl(url) { localStorage.setItem(STORAGE_QR_URL, url); }
+        function getVipPrice() { return localStorage.getItem(STORAGE_VIP_PRICE) || "10"; }
+        function setVipPrice(price) { localStorage.setItem(STORAGE_VIP_PRICE, price); }
+        function getMallUrl() { return localStorage.getItem(STORAGE_MALL_URL) || "#"; }
+        function setMallUrl(url) { localStorage.setItem(STORAGE_MALL_URL, url); }
+        function getExtraLink(index) { return localStorage.getItem(STORAGE_EXTRA_LINKS[index]) || ""; }
+        function setExtraLink(index, url) { localStorage.setItem(STORAGE_EXTRA_LINKS[index], url); }
+        function isDirectRenameAllowed() { return localStorage.getItem(STORAGE_DIRECT_RENAME) === "true"; }
+        function setDirectRenameAllowed(allowed) { localStorage.setItem(STORAGE_DIRECT_RENAME, allowed ? "true" : "false"); }
+        function getHomeAds() { return JSON.parse(localStorage.getItem(STORAGE_HOME_ADS) || "[]"); }
+        function setHomeAds(ads) { localStorage.setItem(STORAGE_HOME_ADS, JSON.stringify(ads)); }
+        function getHomeHelpButtons() { return JSON.parse(localStorage.getItem(STORAGE_HOME_HELP) || "[]"); }
+        function setHomeHelpButtons(buttons) { localStorage.setItem(STORAGE_HOME_HELP, JSON.stringify(buttons)); }
+
+        function getBtnNameList() { return JSON.parse(localStorage.getItem(brandKey('areaBtnNameList')) || "[]"); }
+        function saveBtnNameList(arr) { localStorage.setItem(brandKey('areaBtnNameList'), JSON.stringify(arr)); }
+        function getAreaData(areaId) { return JSON.parse(localStorage.getItem(`areaTree_v9_${currentBrand}_${areaId}`) || "[]"); }
+        function setAreaData(areaId, list) { localStorage.setItem(`areaTree_v9_${currentBrand}_${areaId}`, JSON.stringify(list)); }
+        function loadPendingRenames() { window.pendingRenames = JSON.parse(localStorage.getItem(`${STORAGE_PENDING}_${currentBrand}`) || "[]"); }
+        function savePendingRenames() { localStorage.setItem(`${STORAGE_PENDING}_${currentBrand}`, JSON.stringify(window.pendingRenames)); }
+
+        function applyRename(areaIdx, oldName, newName) {
+            if (oldName === newName) return false;
+            const btnNames = getBtnNameList();
+            btnNames[areaIdx] = newName;
+            saveBtnNameList(btnNames);
+            let list = getAreaData(areaIdx + 1);
+            for (let node of list) if (node.name === oldName) node.name = newName;
+            for (let node of list) if (node.parent === oldName) node.parent = newName;
+            setAreaData(areaIdx + 1, list);
+            return true;
+        }
+        function addRenameRequest(areaIdx, oldName, newName) {
+            loadPendingRenames();
+            if (window.pendingRenames.find(r => r.areaIdx === areaIdx && r.status === 'pending')) {
+                alert("已有该区域的改名申请等待审核"); return false;
+            }
+            window.pendingRenames.push({ id: Date.now(), areaIdx, oldName, newName, status: 'pending' });
+            savePendingRenames();
+            alert(`已提交申请：将"${oldName}"改为"${newName}"，等待管理员审核。`);
+            return true;
+        }
+        function approveRename(requestId) {
+            loadPendingRenames();
+            const req = window.pendingRenames.find(r => r.id === requestId);
+            if (req && req.status === 'pending') {
+                if (applyRename(req.areaIdx, req.oldName, req.newName)) {
+                    req.status = 'approved'; savePendingRenames();
+                    alert(`已通过：${req.oldName} → ${req.newName}`);
+                } else alert("改名失败");
+            }
+            if (getCurrentUser()?.role === 'admin') { renderAdminMainPanel(); renderAuditPanel(); }
+            renderFrontendMainPanel();
+        }
+        function rejectRename(requestId) {
+            loadPendingRenames();
+            const idx = window.pendingRenames.findIndex(r => r.id === requestId);
+            if (idx !== -1 && window.pendingRenames[idx].status === 'pending') {
+                window.pendingRenames.splice(idx, 1); savePendingRenames();
+                alert("已拒绝该改名申请");
+            }
+            if (getCurrentUser()?.role === 'admin') renderAuditPanel();
+        }
+
+        function searchAllRegions(keyword) {
+            if (!keyword.trim()) return [];
+            const lowerKw = keyword.toLowerCase();
+            const results = [];
+            for (let areaIdx = 0; areaIdx < TOTAL_AREAS; areaIdx++) {
+                const list = getAreaData(areaIdx + 1);
+                for (const node of list) {
+                    if (node.name.toLowerCase().includes(lowerKw)) {
+                        const fullPath = buildFullPath(node, list);
+                        results.push({ areaId: areaIdx + 1, nodeId: node.id, name: node.name, fullPath, parentName: node.parent });
+                    }
+                }
+            }
+            return results;
+        }
+        function buildFullPath(item, allList, visited = new Set()) {
+            if (visited.has(item.name + item.parent)) return item.name;
+            visited.add(item.name + item.parent);
+            let path = item.name, p = item.parent;
+            while (p && p !== "") {
+                const parentItem = allList.find(x => x.name === p);
+                if (!parentItem) break;
+                if (visited.has(parentItem.name + parentItem.parent)) break;
+                visited.add(parentItem.name + parentItem.parent);
+                path = parentItem.name + " → " + path;
+                p = parentItem.parent;
+            }
+            return path;
+        }
+        function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
+
+        let currentAdminAreaId = null, currentAdminNode = null;
+        let currentFrontAreaId = null, currentFrontNode = null;
+
+        function switchBrand(brand) {
+            currentBrand = brand;
+            currentAdminAreaId = null; currentAdminNode = null;
+            currentFrontAreaId = null; currentFrontNode = null;
+            const user = getCurrentUser();
+            if (user && user.role === 'admin') {
+                document.getElementById("adminLevelContainer").style.display = "none";
+                renderAdminMainPanel(); renderAuditPanel();
+                document.querySelectorAll(".brand-selector button").forEach(b => b.classList.toggle("active-brand", b.dataset.brand === brand));
+            } else {
+                document.getElementById("frontendLevelContainer").style.display = "none";
+                renderFrontendMainPanel();
+            }
+            document.querySelectorAll(".quick-nav .jump-btn").forEach(b => b.classList.toggle("active-brand", b.dataset.brand === brand));
+            document.getElementById("searchResultsContainer").innerHTML = "";
+            document.getElementById("globalSearchInput").value = "";
+        }
+
+        function adjustTime(areaId, nodeId) {
+            let list = getAreaData(areaId);
+            let item = list.find(x => x.id === nodeId);
+            if (!item) return;
+            if (!item.isBan || !item.startTime) {
+                alert("该节点未处于封禁状态，无法调整时间。");
+                return;
+            }
+            let currentDate = new Date(item.startTime * 1000).toLocaleString();
+            let input = prompt(`当前封禁开始时间：${currentDate}\n输入调整量（如 +2小时、-30分钟、+1天）：`, "+0小时");
+            if (!input) return;
+            let totalSeconds = 0;
+            const regex = /([+-]?\d+)\s*(天|小时|分钟|h|m|d)/gi;
+            let match;
+            while ((match = regex.exec(input)) !== null) {
+                let num = parseInt(match[1]);
+                let unit = match[2].toLowerCase();
+                if (unit === '天' || unit === 'd') totalSeconds += num * 86400;
+                else if (unit === '小时' || unit === 'h') totalSeconds += num * 3600;
+                else if (unit === '分钟' || unit === 'm') totalSeconds += num * 60;
+            }
+            if (totalSeconds === 0) { alert("未识别有效调整量，请使用如 +2小时、-30分钟"); return; }
+            item.startTime += totalSeconds;
+            setAreaData(areaId, list);
+            addOperationLog("调整封禁时间", `调整了节点"${item.name}"的封禁开始时间，偏移${totalSeconds}秒`, areaId, nodeId);
+            if (getCurrentUser()?.role === 'admin') refreshAdminSubGrid();
+            else refreshFrontendSubGrid();
+        }
+
+        function banNode(areaId, nodeId, banDays) {
+            let list = getAreaData(areaId);
+            let item = list.find(x => x.id === nodeId);
+            if (!item) return;
+            item.startTime = Math.floor(Date.now()/1000);
+            item.isBan = true;
+            item.banDay = banDays;
+            setAreaData(areaId, list);
+            addOperationLog("封禁节点", `封禁了节点"${item.name}"，时长${banDays}天`, areaId, nodeId);
+            if (getCurrentUser()?.role === 'admin') refreshAdminSubGrid();
+            else refreshFrontendSubGrid();
+        }
+        function unbanNode(areaId, nodeId) {
+            let list = getAreaData(areaId);
+            let item = list.find(x => x.id === nodeId);
+            if (!item) return;
+            if (!item.isBan) return;
+            item.isBan = false;
+            item.startTime = null;
+            setAreaData(areaId, list);
+            addOperationLog("解禁节点", `解禁了节点"${item.name}"`, areaId, nodeId);
+            if (getCurrentUser()?.role === 'admin') refreshAdminSubGrid();
+            else refreshFrontendSubGrid();
+        }
+        function addSubNode(areaId, parentName, newName, banDays) {
+            let list = getAreaData(areaId);
+            if (list.some(x => x.name === newName && x.parent === parentName)) {
+                if (!confirm("同名存在，是否继续？")) return false;
+            }
+            const newId = list.length === 0 ? 1 : Math.max(...list.map(i => i.id)) + 1;
+            list.push({
+                id: newId,
+                name: newName,
+                parent: parentName,
+                banDay: banDays,
+                startTime: null,
+                isBan: false,
+                lastState: false
+            });
+            setAreaData(areaId, list);
+            addOperationLog("添加下级节点", `在"${parentName || '顶级'}"下添加了"${newName}"，封禁天数${banDays}`, areaId, newId);
+            if (getCurrentUser()?.role === 'admin') refreshAdminSubGrid();
+            else refreshFrontendSubGrid();
+            return true;
+        }
+        function editBanDays(areaId, nodeId, newDays) {
+            let list = getAreaData(areaId);
+            let item = list.find(x => x.id === nodeId);
+            if (!item) return;
+            item.banDay = newDays;
+            setAreaData(areaId, list);
+            addOperationLog("修改封禁天数", `将节点"${item.name}"的封禁天数改为${newDays}天`, areaId, nodeId);
+            if (getCurrentUser()?.role === 'admin') refreshAdminSubGrid();
+            else refreshFrontendSubGrid();
+        }
+
+        function getNodeDepth(areaId, node) {
+            if (!node) return 0;
+            let depth = 0;
+            let cur = node;
+            while (cur && cur.parent && cur.parent !== "") {
+                const list = getAreaData(areaId);
+                const parent = list.find(x => x.name === cur.parent);
+                if (!parent) break;
+                cur = parent;
+                depth++;
+            }
+            return depth;
+        }
+
+        function renderChildren(areaId, currentNode, isAdmin) {
+            const list = getAreaData(areaId);
+            const parentName = currentNode ? currentNode.name : "";
+            let children = list.filter(item => item.parent === parentName).sort((a,b)=>a.id-b.id);
+            const nowSec = Math.floor(Date.now()/1000);
+            const depth = getNodeDepth(areaId, currentNode);
+            const useListStyle = depth >= 2;
+            const containerId = isAdmin ? "adminDynamicSubGrid" : "frontendDynamicSubGrid";
+            const subGrid = document.getElementById(containerId);
+            if (!subGrid) return;
+
+            if (useListStyle) {
+                subGrid.className = "list-view";
+                let html = '';
+                for (let child of children) {
+                    let statusHtml = '', countdownHtml = '', countClass = '';
+                    if (child.isBan && child.startTime) {
+                        const totalSec = child.banDay*86400;
+                        const elapsed = nowSec - child.startTime;
+                        if (elapsed < totalSec) {
+                            const remain = totalSec - elapsed;
+                            const d=Math.floor(remain/86400), h=Math.floor((remain%86400)/3600), m=Math.floor((remain%3600)/60), s=remain%60;
+                            statusHtml = '<span class="ban-badge">⛔ 封禁中</span>';
+                            countdownHtml = `⏳ ${d}天 ${h}时 ${m}分 ${s}秒`;
+                            countClass = 'countdown-red';
+                        } else {
+                            child.isBan = false; child.startTime = null; setAreaData(areaId, list);
+                            statusHtml = '<span class="unban-badge">✅ 正常</span>';
+                            countdownHtml = '——';
+                            countClass = 'countdown-green';
+                        }
+                    } else {
+                        statusHtml = '<span class="unban-badge">🟢 正常</span>';
+                        countdownHtml = '——';
+                        countClass = 'countdown-green';
+                    }
+                    html += `<div class="node-list-item" data-id="${child.id}">
+                        <div class="list-name">${escapeHtml(child.name)}</div>
+                        <div class="list-status">${statusHtml}</div>
+                        <div class="list-countdown ${countClass}">${countdownHtml}</div>
+                        <div class="list-actions">
+                            <button class="btn-ban-card">🔒 封${child.banDay}天</button>
+                            <button class="btn-unban-card">🔓 解禁</button>
+                            <button class="btn-sub-card">➕ 添加下级</button>
+                            <button class="btn-enter-card">📂 进入下级</button>
+                            <button class="btn-edit-card">✏️ 改天数</button>
+                            <button class="btn-time-card">⏰ 改时间</button>
+                            <button class="btn-del-card">🗑️ 删除</button>
+                        </div>
+                    </div>`;
+                }
+                if (children.length === 0) html = '<div class="empty-tip">✨ 暂无下级节点，请使用上方操作栏添加</div>';
+                subGrid.innerHTML = html;
+                for (let child of children) {
+                    const item = subGrid.querySelector(`.node-list-item[data-id="${child.id}"]`);
+                    if (!item) continue;
+                    item.querySelector('.btn-ban-card')?.addEventListener('click', () => { banNode(areaId, child.id, child.banDay); });
+                    item.querySelector('.btn-unban-card')?.addEventListener('click', () => { unbanNode(areaId, child.id); });
+                    item.querySelector('.btn-sub-card')?.addEventListener('click', () => { let newName = prompt(`在"${child.name}"下添加下级:`); if (newName) { let days = parseInt(prompt("封禁天数","3")); if(isNaN(days)||days<1) days=3; addSubNode(areaId, child.name, newName.trim(), days); } });
+                    item.querySelector('.btn-enter-card')?.addEventListener('click', () => {
+                        let l = getAreaData(areaId);
+                        let node = l.find(x => x.id === child.id);
+                        if (node) {
+                            if (isAdmin) { currentAdminNode = node; buildAdminLevelPage(); }
+                            else { currentFrontNode = node; buildFrontendLevelPage(); }
+                        }
+                    });
+                    item.querySelector('.btn-edit-card')?.addEventListener('click', () => { let nd = prompt("修改封禁天数", child.banDay); if (nd && !isNaN(parseInt(nd)) && parseInt(nd) > 0) editBanDays(areaId, child.id, parseInt(nd)); });
+                    item.querySelector('.btn-time-card')?.addEventListener('click', () => adjustTime(areaId, child.id));
+                    item.querySelector('.btn-del-card')?.addEventListener('click', () => {
+                        if (!confirm("确定删除？")) return;
+                        let newList = getAreaData(areaId).filter(x => x.id !== child.id);
+                        setAreaData(areaId, newList);
+                        addOperationLog("删除节点", `删除了节点"${child.name}"`, areaId, child.id);
+                        if ((isAdmin && currentAdminNode && currentAdminNode.id === child.id)) { if (isAdmin) adminGoUp(); else frontGoUp(); }
+                        else renderChildren(areaId, currentNode, isAdmin);
+                    });
+                }
+            } else {
+                subGrid.className = "sub-grid";
+                let html = '';
+                for (let child of children) {
+                    let statusHtml = '', countdownHtml = '', countClass = '';
+                    if (child.isBan && child.startTime) {
+                        const totalSec = child.banDay*86400;
+                        const elapsed = nowSec - child.startTime;
+                        if (elapsed < totalSec) {
+                            const remain = totalSec - elapsed;
+                            const d=Math.floor(remain/86400), h=Math.floor((remain%86400)/3600), m=Math.floor((remain%3600)/60), s=remain%60;
+                            statusHtml = '<span class="ban-badge">⛔ 封禁中</span>';
+                            countdownHtml = `⏳ ${d}天 ${h}时 ${m}分 ${s}秒`;
+                            countClass = 'countdown-red';
+                        } else {
+                            child.isBan = false; child.startTime = null; setAreaData(areaId, list);
+                            statusHtml = '<span class="unban-badge">✅ 正常</span>';
+                            countdownHtml = '——';
+                            countClass = 'countdown-green';
+                        }
+                    } else {
+                        statusHtml = '<span class="unban-badge">🟢 正常</span>';
+                        countdownHtml = '——';
+                        countClass = 'countdown-green';
+                    }
+                    html += `<div class="node-card" data-id="${child.id}">
+                        <div class="node-name">${escapeHtml(child.name)}</div>
+                        <div class="ban-status">${statusHtml}</div>
+                        <div class="countdown-text ${countClass}">${countdownHtml}</div>
+                        <div class="card-actions">
+                            <button class="btn-ban-card">🔒 封${child.banDay}天</button>
+                            <button class="btn-unban-card">🔓 解禁</button>
+                            <button class="btn-sub-card">➕ 添加下级</button>
+                            <button class="btn-enter-card">📂 进入下级</button>
+                            <button class="btn-edit-card">✏️ 改天数</button>
+                            <button class="btn-time-card">⏰ 改时间</button>
+                            <button class="btn-del-card">🗑️ 删除</button>
+                        </div>
+                    </div>`;
+                }
+                if (children.length === 0) html = '<div class="empty-tip">✨ 暂无下级节点，请手动添加</div>';
+                subGrid.innerHTML = html;
+                for (let child of children) {
+                    const card = subGrid.querySelector(`.node-card[data-id="${child.id}"]`);
+                    if (!card) continue;
+                    card.querySelector('.btn-ban-card')?.addEventListener('click', () => { banNode(areaId, child.id, child.banDay); });
+                    card.querySelector('.btn-unban-card')?.addEventListener('click', () => { unbanNode(areaId, child.id); });
+                    card.querySelector('.btn-sub-card')?.addEventListener('click', () => { let newName = prompt(`在"${child.name}"下添加下级:`); if (newName) { let days = parseInt(prompt("封禁天数","3")); if(isNaN(days)||days<1) days=3; addSubNode(areaId, child.name, newName.trim(), days); } });
+                    card.querySelector('.btn-enter-card')?.addEventListener('click', () => {
+                        let l = getAreaData(areaId);
+                        let node = l.find(x => x.id === child.id);
+                        if (node) {
+                            if (isAdmin) { currentAdminNode = node; buildAdminLevelPage(); }
+                            else { currentFrontNode = node; buildFrontendLevelPage(); }
+                        }
+                    });
+                    card.querySelector('.btn-edit-card')?.addEventListener('click', () => { let nd = prompt("修改封禁天数", child.banDay); if (nd && !isNaN(parseInt(nd)) && parseInt(nd) > 0) editBanDays(areaId, child.id, parseInt(nd)); });
+                    card.querySelector('.btn-time-card')?.addEventListener('click', () => adjustTime(areaId, child.id));
+                    card.querySelector('.btn-del-card')?.addEventListener('click', () => {
+                        if (!confirm("确定删除？")) return;
+                        let newList = getAreaData(areaId).filter(x => x.id !== child.id);
+                        setAreaData(areaId, newList);
+                        addOperationLog("删除节点", `删除了节点"${child.name}"`, areaId, child.id);
+                        if ((isAdmin && currentAdminNode && currentAdminNode.id === child.id)) { if (isAdmin) adminGoUp(); else frontGoUp(); }
+                        else renderChildren(areaId, currentNode, isAdmin);
+                    });
+                }
+            }
+        }
+
+        function refreshAdminSubGrid() {
+            if (!currentAdminAreaId) return;
+            renderChildren(currentAdminAreaId, currentAdminNode, true);
+        }
+
+        function adminGoUp() {
+            if(!currentAdminNode) return;
+            let list=getAreaData(currentAdminAreaId);
+            currentAdminNode = currentAdminNode.parent ? list.find(x=>x.name===currentAdminNode.parent)||null : null;
+            buildAdminLevelPage();
+        }
+
+        function buildAdminLevelPage(){
+            const container = document.getElementById("adminLevelContainer");
+            if(!container) return;
+            document.getElementById("adminMainGrid").style.display = "none";
+            container.style.display="block";
+            container.innerHTML = `<div class="level-page"><div class="nav-bar"><button class="nav-btn" id="adminBackToMainBtn">← 返回总控制台</button><button class="nav-btn" id="adminGoUpBtn">⬆ 返回上级</button><div class="breadcrumb" id="adminBreadcrumb">🏠 顶级区域</div></div><div class="operate-bar"><input type="text" id="adminNewName" placeholder="新下级名称" style="flex:2;"><input type="number" id="adminNewDays" value="3" min="1" style="width:110px;"><button class="btn-primary" id="adminAddSubBtn">➕ 添加下级</button><button class="btn-auto" id="adminAutoGenBtn">⚡ 自动生成示例</button></div><div class="sub-grid" id="adminDynamicSubGrid"></div><div class="reminder-note">后台管理员：可封禁/解禁/添加/删除/修改天数/调整封禁时间（区县级以下自动变为条形列表）</div></div>`;
+            document.getElementById("adminBackToMainBtn")?.addEventListener("click",()=>{ 
+                currentAdminAreaId=null; currentAdminNode=null; 
+                container.style.display="none";
+                document.getElementById("adminMainGrid").style.display = "";
+                renderAdminMainPanel(); renderAuditPanel(); 
+            });
+            document.getElementById("adminGoUpBtn")?.addEventListener("click",adminGoUp);
+            document.getElementById("adminAddSubBtn")?.addEventListener("click",()=>{ let name=document.getElementById("adminNewName")?.value.trim(); let days=parseInt(document.getElementById("adminNewDays")?.value); if(!name) return; if(isNaN(days)||days<1) days=3; addSubNode(currentAdminAreaId, currentAdminNode?currentAdminNode.name:"", name, days); document.getElementById("adminNewName").value=""; });
+            document.getElementById("adminAutoGenBtn")?.addEventListener("click",()=>{ let list=getAreaData(currentAdminAreaId); let parent=currentAdminNode?currentAdminNode.name:""; let demo=["示例区","示例街道"]; let added=0; for(let d of demo){ if(!list.some(x=>x.name===d&&x.parent===parent)){ list.push({id:getNextId(list), name:d, parent, banDay:3, startTime:null, isBan:false, lastState:false}); added++; } } if(added) setAreaData(currentAdminAreaId,list); alert(`生成了${added}个示例`); refreshAdminSubGrid(); });
+            let list=getAreaData(currentAdminAreaId);
+            let text="🏠 顶级区域";
+            if(currentAdminNode){ let crumbs=[]; let cur=currentAdminNode; while(cur){ crumbs.unshift(cur.name); cur=list.find(p=>p.name===cur.parent&&cur.parent!=""); } text="🏠 顶级 / "+crumbs.join(" / "); }
+            document.getElementById("adminBreadcrumb").innerText=text;
+            refreshAdminSubGrid();
+            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function renderAdminMainPanel(){
+            const grid=document.getElementById("adminMainGrid");
+            if(!grid) return;
+            grid.style.display = "";
+            const nameArr=getBtnNameList();
+            grid.innerHTML="";
+            for(let i=1;i<=TOTAL_AREAS;i++){
+                const idx=i-1;
+                const card=document.createElement("div"); card.className="area-card";
+                const input=document.createElement("input"); input.className="area-name-input"; input.value=nameArr[idx];
+                input.addEventListener("change", ((areaIdx,arrCopy)=> function(){ let newVal=this.value.trim()||"区域"; arrCopy[areaIdx]=newVal; saveBtnNameList(arrCopy); this.parentNode.querySelector(".enter-area-btn").innerText=newVal; })(idx,nameArr));
+                const btn=document.createElement("button"); btn.className="enter-area-btn"; btn.innerText=nameArr[idx];
+                btn.addEventListener("click",(()=>{ currentAdminAreaId=i; currentAdminNode=null; buildAdminLevelPage(); }));
+                card.appendChild(input); card.appendChild(btn); grid.appendChild(card);
+            }
+        }
+        function renderAuditPanel(){
+            loadPendingRenames();
+            const container=document.getElementById("auditList");
+            if(!container) return;
+            const pending = window.pendingRenames.filter(r=>r.status==='pending');
+            if(pending.length===0){ container.innerHTML="暂无申请"; return; }
+            let html="";
+            for(let req of pending){
+                html+=`<div class="audit-item"><span>🔹 区域 ${req.areaIdx+1}: ${req.oldName} → ${req.newName}</span>
+                    <div><button class="btn-approve" data-id="${req.id}">✓ 批准</button><button class="btn-reject" data-id="${req.id}">✗ 拒绝</button></div></div>`;
+            }
+            container.innerHTML=html;
+            document.querySelectorAll(".btn-approve").forEach(btn=>btn.addEventListener("click",()=>approveRename(parseInt(btn.dataset.id))));
+            document.querySelectorAll(".btn-reject").forEach(btn=>btn.addEventListener("click",()=>rejectRename(parseInt(btn.dataset.id))));
+        }
+        function renderUserPanel(){
+            const container=document.getElementById("userPanelList");
+            if(!container) return;
+            const users=getUsers();
+            const online=getOnlineUsers();
+            const membershipOn = isMembershipSystemEnabled();
+            const directRename = isDirectRenameAllowed();
+            let html = `<div class="user-stats">👥 总用户数: ${users.length} &nbsp; 🟢 在线: ${online.length}</div>`;
+            html += `<div class="switch-container">
+                <span style="font-weight:bold;">💳 会员系统：</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="membershipToggle" ${membershipOn ? 'checked' : ''}>
+                    <span class="slider"></span>
+                </label>
+                <span id="membershipStatus">${membershipOn ? '🟢 已开启' : '🔴 已关闭'}</span>
+            </div>`;
+            html += `<div class="switch-container">
+                <span style="font-weight:bold;">🔧 直接修改权限（同时赋予普通用户完整管控能力）：</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="directRenameToggle" ${directRename ? 'checked' : ''}>
+                    <span class="slider"></span>
+                </label>
+                <span id="renameStatus">${directRename ? '🟢 用户可直接修改名称且拥有完整管控权限' : '🔴 需提交申请审核，无管控权限'}</span>
+            </div>`;
+            for(let u of users){
+                const isOnline=online.includes(u.username);
+                const isAdminUser = u.role === 'admin';
+                const isMember = u.membership;
+                const trialActive = isMembershipSystemEnabled() && u.freeTrialEnd && Date.now() < u.freeTrialEnd;
+                const trialEndStr = trialActive ? `试用至 ${new Date(u.freeTrialEnd).toLocaleDateString()}` : '';
+                html+=`<div class="user-item">
+                    <div>
+                        <strong>${escapeHtml(u.username)}</strong> 
+                        (${u.role}) 
+                        ${isMember?'<span class="vip-badge">💎会员</span>':''}
+                        ${trialActive?'<span class="trial-badge">🎁试用会员 (${trialEndStr})</span>':''}
+                        ${isOnline?'<span class="online-badge">在线</span>':'<span class="offline-badge">离线</span>'}
+                    </div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                        ${!isAdminUser ? `<button class="btn-edit-user" data-username="${u.username}">⬆️ 升管理</button>` : (u.username!=='admin'?`<button class="btn-demote" data-username="${u.username}">⬇️ 解除管理</button>`:'')}
+                        ${isMember ? `<button class="btn-member" data-username="${u.username}" data-action="unset">💔 取消会员</button>` : `<button class="btn-member" data-username="${u.username}" data-action="set">💎 设为会员</button>`}
+                        ${u.username!=='admin'?`<button class="btn-delete-user" data-username="${u.username}">🗑 删除</button>`:''}
+                    </div></div>`;
+            }
+            html+=`<hr style="border-color:#3a3a50; margin:20px 0;">
+                   <div style="background:#252535;padding:14px;border-radius:20px;">
+                       <h4>💳 会员收款二维码设置</h4>
+                       <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
+                           <input type="file" id="qrFileInput" accept="image/*" style="display:none;">
+                           <button id="uploadQrBtn" class="btn-primary" style="padding:8px 20px;">📁 上传图片</button>
+                           <span style="font-size:0.8rem;color:#aaa;">或手动输入链接</span>
+                       </div>
+                       <input type="text" id="qrUrlInput" placeholder="收款二维码图片链接" value="${escapeHtml(getQrUrl())}" style="width:100%;padding:10px;border-radius:40px;background:#2a2a38;border:1px solid #424256;color:white;margin-bottom:8px;">
+                       <button id="saveQrBtn" class="btn-primary">💾 保存二维码</button>
+                       <span id="qrMsg" style="margin-left:12px;color:#f5af19;"></span>
+                       <h4 style="margin-top:20px;">💰 会员价格 (USDT)</h4>
+                       <input type="number" id="vipPriceInput" value="${getVipPrice()}" min="0" step="0.01" style="width:100%;padding:10px;border-radius:40px;background:#2a2a38;border:1px solid #424256;color:white;margin-bottom:8px;">
+                       <button id="saveVipPriceBtn" class="btn-primary">💾 保存价格</button>
+                       <span id="priceMsg" style="margin-left:12px;color:#f5af19;"></span>
+                       <h4 style="margin-top:20px;">🛒 商城页面链接</h4>
+                       <input type="text" id="mallUrlInput" placeholder="输入商城链接（如 https://...）" value="${escapeHtml(getMallUrl())}" style="width:100%;padding:10px;border-radius:40px;background:#2a2a38;border:1px solid #424256;color:white;margin-bottom:8px;">
+                       <button id="saveMallUrlBtn" class="btn-primary">💾 保存链接</button>
+                       <span id="mallMsg" style="margin-left:12px;color:#f5af19;"></span>
+                       <h4 style="margin-top:20px;">🔗 自定义跳转链接（接口位置：商城旁的四个按钮）</h4>
+                       <p style="font-size:0.8rem;color:#aaa;">配置后，商城旁的按钮将可点击跳转。留空则不跳转。</p>`;
+            for (let i = 0; i < 4; i++) {
+                html += `<input type="text" id="extraLinkInput${i}" placeholder="自定义链接 ${i+1}" value="${escapeHtml(getExtraLink(i))}" style="width:100%;padding:10px;border-radius:40px;background:#2a2a38;border:1px solid #424256;color:white;margin-bottom:8px;">`;
+            }
+            html += `<button id="saveExtraLinksBtn" class="btn-primary">💾 保存全部链接</button>
+                       <span id="extraMsg" style="margin-left:12px;color:#f5af19;"></span>
+                   </div>`;
+            container.innerHTML=html;
+            document.getElementById("membershipToggle")?.addEventListener("change", function() {
+                setMembershipSystemEnabled(this.checked);
+                document.getElementById("membershipStatus").innerText = this.checked ? '🟢 已开启' : '🔴 已关闭';
+                const vipBtn = document.getElementById("openVipBtn");
+                if (vipBtn) vipBtn.style.display = (!isMembershipSystemEnabled() || getCurrentUser()?.role === 'admin') ? 'none' : 'inline-block';
+            });
+            document.getElementById("directRenameToggle")?.addEventListener("change", function() {
+                setDirectRenameAllowed(this.checked);
+                document.getElementById("renameStatus").innerText = this.checked ? '🟢 用户可直接修改名称且拥有完整管控权限' : '🔴 需提交申请审核，无管控权限';
+                renderFrontendMainPanel();
+            });
+            document.querySelectorAll(".btn-edit-user").forEach(btn=>{
+                btn.addEventListener("click",()=>{ const username=btn.dataset.username; if(confirm(`确定将 ${username} 升级为管理员吗？`)){ updateUserRole(username, 'admin'); alert("已升级为管理员"); renderUserPanel(); } });
+            });
+            document.querySelectorAll(".btn-demote").forEach(btn=>{
+                btn.addEventListener("click",()=>{ const username=btn.dataset.username; if(confirm(`确定解除 ${username} 的管理权限吗？`)){ updateUserRole(username, 'user'); alert("已解除管理权限"); renderUserPanel(); } });
+            });
+            document.querySelectorAll(".btn-member").forEach(btn=>{
+                btn.addEventListener("click",()=>{
+                    const username=btn.dataset.username;
+                    const action=btn.dataset.action;
+                    if(action==='set'){ if(confirm(`将 ${username} 设为会员？`)){ updateUserMembership(username, true); alert("已设为会员"); renderUserPanel(); } }
+                    else { if(confirm(`取消 ${username} 的会员身份？`)){ updateUserMembership(username, false); alert("已取消会员"); renderUserPanel(); } }
+                });
+            });
+            document.querySelectorAll(".btn-delete-user").forEach(btn=>{
+                btn.addEventListener("click",()=>{ if(confirm("确认删除？")){ if(deleteUser(btn.dataset.username)) alert("删除成功"); else alert("删除失败"); renderUserPanel(); } });
+            });
+            document.getElementById("uploadQrBtn")?.addEventListener("click",()=>{ document.getElementById("qrFileInput").click(); });
+            document.getElementById("qrFileInput")?.addEventListener("change",(e)=>{
+                const file = e.target.files[0];
+                if(!file) return;
+                const reader = new FileReader();
+                reader.onload = function(ev){
+                    document.getElementById("qrUrlInput").value = ev.target.result;
+                    setQrUrl(ev.target.result);
+                    document.getElementById("qrMsg").innerText = "图片已加载，点击保存生效";
+                };
+                reader.readAsDataURL(file);
+            });
+            document.getElementById("saveQrBtn")?.addEventListener("click",()=>{
+                const url = document.getElementById("qrUrlInput").value.trim();
+                setQrUrl(url);
+                document.getElementById("qrMsg").innerText = "已保存！";
+                setTimeout(()=>{ document.getElementById("qrMsg").innerText=""; },2000);
+            });
+            document.getElementById("saveVipPriceBtn")?.addEventListener("click",()=>{
+                const price = document.getElementById("vipPriceInput").value;
+                setVipPrice(price);
+                document.getElementById("priceMsg").innerText = "价格已保存！";
+                setTimeout(()=>{ document.getElementById("priceMsg").innerText=""; },2000);
+            });
+            document.getElementById("saveMallUrlBtn")?.addEventListener("click",()=>{
+                const url = document.getElementById("mallUrlInput").value.trim();
+                setMallUrl(url);
+                document.getElementById("mallMsg").innerText = "链接已保存！";
+                setTimeout(()=>{ document.getElementById("mallMsg").innerText=""; },2000);
+            });
+            document.getElementById("saveExtraLinksBtn")?.addEventListener("click",()=>{
+                for (let i = 0; i < 4; i++) {
+                    const url = document.getElementById(`extraLinkInput${i}`).value.trim();
+                    setExtraLink(i, url);
+                }
+                document.getElementById("extraMsg").innerText = "已保存！";
+                setTimeout(()=>{ document.getElementById("extraMsg").innerText=""; },2000);
+            });
+        }
+        function renderProfilePanel(){
+            const container=document.getElementById("profilePanel");
+            if(!container) return;
+            const user=getCurrentUser();
+            container.innerHTML=`<div class="profile-panel"><h3>🔐 个人安全设置</h3><div class="profile-form"><input type="password" id="oldPwd" placeholder="当前密码"><input type="password" id="newPwd" placeholder="新密码"><input type="password" id="confirmPwd" placeholder="确认新密码"><button class="btn-primary" id="changePwdBtn">修改密码</button><div id="pwdMsg" style="color:#ffaa66;"></div></div></div>`;
+            document.getElementById("changePwdBtn")?.addEventListener("click",()=>{
+                const oldPwd=document.getElementById("oldPwd").value;
+                const newPwd=document.getElementById("newPwd").value;
+                const confirmPwd=document.getElementById("confirmPwd").value;
+                if(newPwd!==confirmPwd){ document.getElementById("pwdMsg").innerText="新密码与确认密码不一致"; return; }
+                if(updateUserPassword(user.username, oldPwd, newPwd)){ alert("密码修改成功，请重新登录"); logout(); }
+                else document.getElementById("pwdMsg").innerText="原密码错误或修改失败";
+            });
+        }
+
+        function renderLogsPanel(){
+            const container = document.getElementById("logsPanel");
+            if(!container) return;
+            const logs = getOperationLogs();
+            if(logs.length === 0){
+                container.innerHTML = '<div class="audit-panel"><h3>📜 操作日志</h3><p>暂无操作记录</p></div>';
+                return;
+            }
+            let html = '<div class="audit-panel"><h3>📜 操作日志</h3>';
+            for(let log of logs){
+                let jumpBtn = '';
+                if(log.areaId && log.nodeId){
+                    jumpBtn = `<button class="btn-jump-log" data-area="${log.areaId}" data-node="${log.nodeId}" data-brand="${log.brand}">🔍 跳转查看</button>`;
+                }
+                html += `<div class="log-item" data-log-id="${log.id}">
+                    <div><strong>${escapeHtml(log.username)}</strong> <span style="color:#aaa;">${new Date(log.timestamp).toLocaleString()}</span><br>
+                    [${BRAND_NAMES[log.brand] || log.brand}] ${escapeHtml(log.operation)}<br>
+                    <span style="font-size:0.8rem;">${escapeHtml(log.details)}</span></div>
+                    <div>
+                        ${jumpBtn}
+                        <button class="btn-delete-log" data-id="${log.id}">✖ 删除</button>
+                    </div>
+                </div>`;
+            }
+            html += '</div>';
+            container.innerHTML = html;
+            container.querySelectorAll('.btn-jump-log').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const areaId = parseInt(btn.dataset.area);
+                    const nodeId = parseInt(btn.dataset.node);
+                    const brand = btn.dataset.brand;
+                    if(brand !== currentBrand){
+                        if(confirm(`需要切换到品牌 ${BRAND_NAMES[brand]}，是否切换？`)){
+                            switchBrand(brand);
+                        } else return;
+                    }
+                    const user = getCurrentUser();
+                    if(user && user.role === 'admin'){
+                        document.getElementById("adminView").style.display = "block";
+                        document.getElementById("frontendView").style.display = "none";
+                        document.getElementById("regionTab").style.display = "block";
+                        document.getElementById("auditTab").style.display = "none";
+                        document.getElementById("userTab").style.display = "none";
+                        document.getElementById("profileTab").style.display = "none";
+                        document.getElementById("homeSettingsTab").style.display = "none";
+                        document.getElementById("logsTab").style.display = "none";
+                        currentAdminAreaId = areaId;
+                        const list = getAreaData(areaId);
+                        currentAdminNode = list.find(x => x.id === nodeId) || null;
+                        buildAdminLevelPage();
+                    } else {
+                        if(!checkAccess()){
+                            alert("您需要会员资格才能查看该区域详情。");
+                            return;
+                        }
+                        document.getElementById("adminView").style.display = "none";
+                        document.getElementById("frontendView").style.display = "block";
+                        currentFrontAreaId = areaId;
+                        const list = getAreaData(areaId);
+                        currentFrontNode = list.find(x => x.id === nodeId) || null;
+                        buildFrontendLevelPage();
+                    }
+                });
+            });
+            container.querySelectorAll('.btn-delete-log').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if(confirm("确定删除这条日志吗？")){
+                        const logId = parseInt(btn.dataset.id);
+                        deleteLogById(logId);
+                    }
+                });
+            });
+            markLogsAsRead();
+        }
+
+        function renderAnnouncementPanel() {
+            const container = document.getElementById("announcementPanel");
+            if (!container) return;
+            const currentAnnouncement = getAnnouncement();
+            container.innerHTML = `
+                <div class="user-panel">
+                    <h3>📢 主页公告栏设置</h3>
+                    <p style="margin-bottom:10px; color:#aaa;">编辑以下内容，前台主页"欢迎回来"右侧将实时显示。</p>
+                    <textarea id="announcementContent" rows="5" style="width:100%; padding:12px; border-radius:20px; background:#2a2a38; border:1px solid #424256; color:white; font-size:0.9rem;">${escapeHtml(currentAnnouncement)}</textarea>
+                    <button id="saveAnnouncementBtn" class="btn-primary" style="margin-top:15px;">💾 保存公告</button>
+                    <span id="announcementMsg" style="margin-left:12px; color:#f5af19;"></span>
+                </div>
+            `;
+            document.getElementById("saveAnnouncementBtn")?.addEventListener("click", () => {
+                const newContent = document.getElementById("announcementContent").value.trim();
+                if (newContent === "") {
+                    alert("公告内容不能为空");
+                    return;
+                }
+                setAnnouncement(newContent);
+                document.getElementById("announcementMsg").innerText = "公告已保存！";
+                setTimeout(() => { document.getElementById("announcementMsg").innerText = ""; }, 2000);
+                if (currentPage === 'home') {
+                    const announcementDiv = document.querySelector(".hero-right .announcement-content");
+                    if (announcementDiv) announcementDiv.innerHTML = escapeHtml(newContent).replace(/\n/g, '<br>');
+                }
+            });
+        }
+
+        function checkAccess() {
+            const user = getCurrentUser();
+            if (!user) return false;
+            if (user.role === 'admin') return true;
+            return isMembershipActive(user);
+        }
+
+        function refreshFrontendSubGrid() {
+            if (!currentFrontAreaId) return;
+            renderChildren(currentFrontAreaId, currentFrontNode, false);
+        }
+
+        function frontGoUp() {
+            if(!currentFrontNode) return;
+            let list=getAreaData(currentFrontAreaId);
+            currentFrontNode = currentFrontNode.parent ? list.find(x=>x.name===currentFrontNode.parent)||null : null;
+            buildFrontendLevelPage();
+        }
+
+        function buildFrontendLevelPage(){
+            const container=document.getElementById("frontendLevelContainer");
+            document.getElementById("frontendMainGrid").style.display = "none";
+            container.style.display="block";
+            container.innerHTML=`<div class="level-page"><div class="nav-bar"><button class="nav-btn" id="frontBackBtn">← 返回总览</button><button class="nav-btn" id="frontUpBtn">⬆ 返回上级</button><div class="breadcrumb" id="frontBreadcrumb">🏠 顶级区域</div></div><div class="operate-bar"><input type="text" id="frontNewName" placeholder="新下级名称" style="flex:2;"><input type="number" id="frontNewDays" value="3" min="1" style="width:110px;"><button class="btn-primary" id="frontAddSubBtn">➕ 添加下级</button><button class="btn-auto" id="frontAutoGenBtn">⚡ 自动生成示例</button></div><div class="sub-grid" id="frontendDynamicSubGrid"></div><div class="reminder-note">⭐ 您拥有完整管控权限（封禁/解禁/添加/删除/修改天数/调整时间）。所有操作将记录日志供管理员查看。（区县级以下自动变为条形列表）</div></div>`;
+            document.getElementById("frontBackBtn")?.addEventListener("click",()=>{ 
+                currentFrontAreaId=null; currentFrontNode=null; 
+                container.style.display="none";
+                document.getElementById("frontendMainGrid").style.display = "";
+                renderFrontendMainPanel(); 
+            });
+            document.getElementById("frontUpBtn")?.addEventListener("click", frontGoUp);
+            document.getElementById("frontAddSubBtn")?.addEventListener("click",()=>{ 
+                let name=document.getElementById("frontNewName")?.value.trim(); 
+                let days=parseInt(document.getElementById("frontNewDays")?.value); 
+                if(!name) return; 
+                if(isNaN(days)||days<1) days=3; 
+                addSubNode(currentFrontAreaId, currentFrontNode?currentFrontNode.name:"", name, days); 
+                document.getElementById("frontNewName").value=""; 
+            });
+            document.getElementById("frontAutoGenBtn")?.addEventListener("click",()=>{ 
+                let list=getAreaData(currentFrontAreaId); 
+                let parent=currentFrontNode?currentFrontNode.name:""; 
+                let demo=["示例区","示例街道"]; 
+                let added=0; 
+                for(let d of demo){ 
+                    if(!list.some(x=>x.name===d&&x.parent===parent)){ 
+                        list.push({id:getNextId(list), name:d, parent, banDay:3, startTime:null, isBan:false, lastState:false}); 
+                        added++; 
+                    } 
+                } 
+                if(added) setAreaData(currentFrontAreaId,list); 
+                alert(`生成了${added}个示例`); 
+                refreshFrontendSubGrid(); 
+            });
+            let list=getAreaData(currentFrontAreaId);
+            let text="🏠 顶级区域";
+            if(currentFrontNode){ let crumbs=[]; let cur=currentFrontNode; while(cur){ crumbs.unshift(cur.name); cur=list.find(p=>p.name===cur.parent&&cur.parent!=""); } text="🏠 顶级 / "+crumbs.join(" / "); }
+            document.getElementById("frontBreadcrumb").innerText=text;
+            refreshFrontendSubGrid();
+            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function renderFrontendMainPanel(){
+            const grid=document.getElementById("frontendMainGrid");
+            if(!grid) return;
+            grid.style.display = "";
+            const nameArr=getBtnNameList();
+            grid.innerHTML="";
+            for(let i=1;i<=TOTAL_AREAS;i++){
+                const idx=i-1;
+                const card=document.createElement("div"); card.className="area-card";
+                const input=document.createElement("input"); input.className="area-name-input"; input.value=nameArr[idx];
+                input.addEventListener("change", ((areaIdx,arrCopy)=> function(){ 
+                    let newVal=this.value.trim()||"区域"; 
+                    let oldVal = arrCopy[areaIdx];
+                    arrCopy[areaIdx]=newVal; 
+                    saveBtnNameList(arrCopy); 
+                    this.parentNode.querySelector(".enter-area-btn").innerText=newVal;
+                    applyRename(areaIdx, oldVal, newVal);
+                    addOperationLog("普通用户修改区域名称", `将"${oldVal}"改为"${newVal}"`, areaIdx+1, null);
+                })(idx,nameArr));
+                const btn=document.createElement("button"); btn.className="enter-area-btn"; btn.innerText=nameArr[idx];
+                btn.addEventListener("click",(()=>{ 
+                    currentFrontAreaId=i; currentFrontNode=null; buildFrontendLevelPage(); 
+                }));
+                card.appendChild(input); card.appendChild(btn); 
+                grid.appendChild(card);
+            }
+        }
+
+        function showSearchResults(keyword){
+            const results=searchAllRegions(keyword);
+            const container=document.getElementById("searchResultsContainer");
+            if(!container) return;
+            if(!keyword.trim()){ container.innerHTML=""; return; }
+            if(results.length===0){ container.innerHTML='<div class="search-results">🔍 未找到匹配的区域</div>'; return; }
+            let html='<div class="search-results"><h4>搜索结果：</h4>';
+            for(let r of results){
+                html+=`<div class="search-result-item" data-areaid="${r.areaId}" data-nodeid="${r.nodeId}" data-parent="${r.parentName}">
+                    <div><strong>${escapeHtml(r.name)}</strong><span style="color:#aaa;"> (${escapeHtml(r.fullPath)})</span></div>
+                    <div>🔍 点击查看</div>
+                </div>`;
+            }
+            html+=`</div>`;
+            container.innerHTML=html;
+            document.querySelectorAll(".search-result-item").forEach(el=>{
+                el.addEventListener("click",()=>{
+                    const areaId=parseInt(el.dataset.areaid);
+                    const nodeId=parseInt(el.dataset.nodeid);
+                    const parentName = el.dataset.parent;
+                    const user = getCurrentUser();
+                    if(user && user.role==='admin'){
+                        document.getElementById("adminView").style.display="block";
+                        document.getElementById("frontendView").style.display="none";
+                        document.getElementById("regionTab").style.display="block";
+                        document.getElementById("auditTab").style.display="none";
+                        document.getElementById("userTab").style.display="none";
+                        document.getElementById("profileTab").style.display="none";
+                        document.getElementById("homeSettingsTab").style.display="none";
+                        document.getElementById("logsTab").style.display="none";
+                        currentAdminAreaId = areaId;
+                        const list = getAreaData(areaId);
+                        if(parentName && parentName !== ""){
+                            currentAdminNode = list.find(x => x.name === parentName) || null;
+                        } else {
+                            currentAdminNode = null;
+                        }
+                        buildAdminLevelPage();
+                        setTimeout(() => {
+                            const targetCard = document.querySelector(`.node-card[data-id="${nodeId}"], .node-list-item[data-id="${nodeId}"]`);
+                            if(targetCard) targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 100);
+                    } else {
+                        if (!checkAccess()) {
+                            alert("您需要会员资格才能查看该区域详情。");
+                            return;
+                        }
+                        document.getElementById("adminView").style.display="none";
+                        document.getElementById("frontendView").style.display="block";
+                        currentFrontAreaId = areaId;
+                        const list = getAreaData(areaId);
+                        if(parentName && parentName !== ""){
+                            currentFrontNode = list.find(x => x.name === parentName) || null;
+                        } else {
+                            currentFrontNode = null;
+                        }
+                        buildFrontendLevelPage();
+                        setTimeout(() => {
+                            const targetCard = document.querySelector(`.node-card[data-id="${nodeId}"], .node-list-item[data-id="${nodeId}"]`);
+                            if(targetCard) targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 100);
+                    }
+                    document.getElementById("globalSearchInput").value = "";
+                    container.innerHTML = "";
+                });
+            });
+        }
+
+        function showMembershipModal(){
+            const qrUrl = getQrUrl();
+            const price = getVipPrice();
+            if (!qrUrl) { alert("暂无收款二维码，请联系管理员设置。"); return; }
+            const overlay = document.createElement("div");
+            overlay.className = "modal-overlay";
+            overlay.innerHTML = `<div class="modal-content">
+                <h3>💎 开通会员</h3>
+                <p style="margin:10px 0;">支付 <strong style="color:#f5af19;font-size:1.5rem;">${price} USDT</strong></p>
+                <img src="${qrUrl}" alt="收款二维码" onerror="this.style.display='none';this.nextSibling.style.display='block';">
+                <p style="display:none;color:#ff7b72;">二维码加载失败，请检查链接</p>
+                <p style="font-size:0.7rem;color:#aaa;">支付完成后请联系管理员手动开通</p>
+                <button class="modal-close" id="closeModalBtn">关闭</button>
+            </div>`;
+            document.body.appendChild(overlay);
+            overlay.addEventListener("click", (e) => { if (e.target === overlay || e.target.id === 'closeModalBtn') overlay.remove(); });
+        }
+
+        function renderHomeSettingsPanel() {
+            const container = document.getElementById("homeSettingsContainer");
+            if (!container) return;
+            const ads = getHomeAds();
+            const helpBtns = getHomeHelpButtons();
+            let html = '<div class="user-panel"><h3>🏠 主页广告位设置（共6个，无图片大小限制）</h3>';
+            for (let i = 0; i < 6; i++) {
+                const ad = ads[i] || { image: "", title: "", desc: "", link: "" };
+                html += `<div style="background:#252535;padding:15px;border-radius:20px;margin-bottom:15px;" data-ad-index="${i}">
+                    <h4>广告位 ${i+1}</h4>
+                    <label>图片 (可粘贴链接或上传，无大小限制)</label>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <input type="text" id="adImage${i}" placeholder="图片URL" value="${escapeHtml(ad.image)}" style="flex:1; padding:10px; border-radius:40px; background:#2a2a38; border:1px solid #424256; color:white;">
+                        <button class="upload-ad-btn" data-index="${i}" style="background:#4f6faf; border:none; padding:6px 12px; border-radius:40px; cursor:pointer;">📁 上传</button>
+                    </div>
+                    <label style="margin-top:10px;">标题</label>
+                    <input type="text" id="adTitle${i}" value="${escapeHtml(ad.title)}" style="width:100%;padding:10px;border-radius:40px;background:#2a2a38;border:1px solid #424256;color:white;margin-bottom:8px;">
+                    <label>描述</label>
+                    <input type="text" id="adDesc${i}" value="${escapeHtml(ad.desc)}" style="width:100%;padding:10px;border-radius:40px;background:#2a2a38;border:1px solid #424256;color:white;margin-bottom:8px;">
+                    <label>点击跳转链接</label>
+                    <input type="text" id="adLink${i}" value="${escapeHtml(ad.link)}" style="width:100%;padding:10px;border-radius:40px;background:#2a2a38;border:1px solid #424256;color:white;">
+                </div>`;
+            }
+            html += '<h3>🆕 新手指南按钮（2个）</h3>';
+            for (let i = 0; i < 2; i++) {
+                const btn = helpBtns[i] || { text: "", image: "", content: "", link: "" };
+                html += `<div style="background:#252535;padding:15px;border-radius:20px;margin-bottom:15px;">
+                    <h4>按钮 ${i+1}</h4>
+                    <label>按钮文字</label>
+                    <input type="text" id="helpText${i}" value="${escapeHtml(btn.text)}" style="width:100%;padding:10px;border-radius:40px;background:#2a2a38;border:1px solid #424256;color:white;margin-bottom:8px;">
+                    <label>按钮图片 (可粘贴链接或上传，无大小限制)</label>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <input type="text" id="helpImage${i}" placeholder="图片URL" value="${escapeHtml(btn.image)}" style="flex:1; padding:10px; border-radius:40px; background:#2a2a38; border:1px solid #424256; color:white;">
+                        <button class="upload-help-btn" data-index="${i}" style="background:#4f6faf; border:none; padding:6px 12px; border-radius:40px; cursor:pointer;">📁 上传</button>
+                    </div>
+                    <label style="margin-top:10px;">弹出内容 (留空则跳转链接)</label>
+                    <textarea id="helpContent${i}" style="width:100%;padding:10px;border-radius:20px;background:#2a2a38;border:1px solid #424256;color:white;height:80px;">${escapeHtml(btn.content || '')}</textarea>
+                    <label>跳转链接 (若有内容则优先弹窗)</label>
+                    <input type="text" id="helpLink${i}" value="${escapeHtml(btn.link || '')}" style="width:100%;padding:10px;border-radius:40px;background:#2a2a38;border:1px solid #424256;color:white;">
+                </div>`;
+            }
+            html += `<button id="saveHomeSettingsBtn" class="btn-primary">💾 保存主页设置</button></div>`;
+            container.innerHTML = html;
+
+            document.querySelectorAll('.upload-ad-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idx = parseInt(btn.dataset.index);
+                    const fileInput = document.createElement('input');
+                    fileInput.type = 'file';
+                    fileInput.accept = 'image/*';
+                    fileInput.onchange = (ev) => {
+                        const file = ev.target.files[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = function(loadEv) {
+                            const targetInput = document.getElementById(`adImage${idx}`);
+                            if (targetInput) {
+                                targetInput.value = loadEv.target.result;
+                                alert(`广告位 ${idx+1} 图片已加载，请点击保存按钮生效`);
+                            } else {
+                                alert("输入框未找到，请刷新页面重试");
+                            }
+                        };
+                        reader.onerror = () => alert("图片读取失败");
+                        reader.readAsDataURL(file);
+                    };
+                    fileInput.click();
+                });
+            });
+            document.querySelectorAll('.upload-help-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idx = parseInt(btn.dataset.index);
+                    const fileInput = document.createElement('input');
+                    fileInput.type = 'file';
+                    fileInput.accept = 'image/*';
+                    fileInput.onchange = (ev) => {
+                        const file = ev.target.files[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = function(loadEv) {
+                            const targetInput = document.getElementById(`helpImage${idx}`);
+                            if (targetInput) targetInput.value = loadEv.target.result;
+                            else alert("输入框未找到");
+                        };
+                        reader.readAsDataURL(file);
+                    };
+                    fileInput.click();
+                });
+            });
+
+            document.getElementById("saveHomeSettingsBtn")?.addEventListener("click", () => {
+                const newAds = [];
+                for (let i = 0; i < 6; i++) {
+                    const imgValue = document.getElementById(`adImage${i}`)?.value || "";
+                    newAds.push({
+                        image: imgValue,
+                        title: document.getElementById(`adTitle${i}`)?.value || "",
+                        desc: document.getElementById(`adDesc${i}`)?.value || "",
+                        link: document.getElementById(`adLink${i}`)?.value || ""
+                    });
+                }
+                try {
+                    setHomeAds(newAds);
+                    alert("主页广告设置已保存！");
+                } catch(e) {
+                    if (e.name === "QuotaExceededError") {
+                        alert("保存失败：图片数据过大，超出浏览器存储限制。请尝试使用较小的图片或图片链接。");
+                    } else {
+                        alert("保存失败：" + e.message);
+                    }
+                }
+                const newHelp = [];
+                for (let i = 0; i < 2; i++) {
+                    newHelp.push({
+                        text: document.getElementById(`helpText${i}`)?.value || "",
+                        image: document.getElementById(`helpImage${i}`)?.value || "",
+                        content: document.getElementById(`helpContent${i}`)?.value || "",
+                        link: document.getElementById(`helpLink${i}`)?.value || ""
+                    });
+                }
+                setHomeHelpButtons(newHelp);
+                alert("新手指南按钮已保存！");
+            });
+        }
+
+        function renderHomePage() {
+            const ads = getHomeAds();
+            const helpBtns = getHomeHelpButtons();
+            const announcement = getAnnouncement();
+            let adHtml = '';
+            ads.forEach((ad, index) => {
+                const imgSrc = ad.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="280" height="180" viewBox="0 0 280 180"%3E%3Crect fill="%23252532" width="280" height="180"/%3E%3Ctext fill="%23aaa" font-size="20" x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"%3E广告位 '+(index+1)+'%3C/text%3E%3C/svg%3E';
+                const title = ad.title || '广告位 ' + (index+1);
+                const desc = ad.desc || '';
+                const link = ad.link || '';
+                adHtml += `<div class="ad-card" ${link ? `onclick="window.open('${escapeHtml(link)}', '_blank')"` : ''} style="${link ? '' : 'cursor:default;'}">
+                    <img src="${imgSrc}" alt="${escapeHtml(title)}">
+                    <div class="ad-card-body">
+                        <h3>${escapeHtml(title)}</h3>
+                        <p>${escapeHtml(desc)}</p>
+                    </div>
+                </div>`;
+            });
+            let helpHtml = '';
+            helpBtns.forEach((btn, idx) => {
+                const imgSrc = btn.image ? `<img src="${escapeHtml(btn.image)}" alt="">` : '';
+                helpHtml += `<button class="help-btn" data-index="${idx}">${imgSrc} ${escapeHtml(btn.text || '帮助按钮')}</button>`;
+            });
+            const container = document.getElementById("appContainer");
+            container.innerHTML = `
+                <div class="app-wrapper">
+                    <div class="app-header">
+                        <h2>🗺️ 区域管控系统</h2>
+                        <div class="user-info">
+                            <span>👤 ${getCurrentUser()?.username || ''}</span>
+                            <button class="logout-btn" id="logoutBtn">退出</button>
+                        </div>
+                    </div>
+                    <div class="home-hero">
+                        <div class="hero-left">
+                            <h1>欢迎回来</h1>
+                            <p>探索全国区域数据，高效管控，智能分析</p>
+                            <button class="home-btn-enter" id="enterSystemBtn">🚀 进入系统</button>
+                        </div>
+                        <div class="hero-right">
+                            <h3>📢 系统公告</h3>
+                            <div class="announcement-content">${escapeHtml(announcement).replace(/\n/g, '<br>')}</div>
+                        </div>
+                    </div>
+                    <h2 style="margin-bottom:20px;">🆕 新手指南</h2>
+                    <div class="help-buttons">${helpHtml}</div>
+                    <h2 style="margin:30px 0 20px;">📢 推荐内容</h2>
+                    <div class="ad-grid">${adHtml}</div>
+                    <p style="text-align:center; color:#aaa; margin-top:30px;">不懂可以查看首页介绍 | 每一个入口都可以添加子页面 | 如发现胡乱添加，将永久封号</p>
+                </div>
+            `;
+            document.getElementById("logoutBtn")?.addEventListener("click", logout);
+            document.getElementById("enterSystemBtn")?.addEventListener("click", () => {
+                currentPage = 'system';
+                renderApp(getCurrentUser());
+            });
+            document.querySelectorAll(".help-btn").forEach(btn => {
+                btn.addEventListener("click", (e) => {
+                    const index = parseInt(e.currentTarget.dataset.index);
+                    const helpBtn = getHomeHelpButtons()[index];
+                    if (helpBtn) {
+                        if (helpBtn.link && helpBtn.link.trim() !== '') {
+                            window.open(helpBtn.link, '_blank');
+                        } else if (helpBtn.content) {
+                            alert(helpBtn.content);
+                        } else {
+                            alert("暂无帮助内容");
+                        }
+                    }
+                });
+            });
+        }
+
+        function renderApp(user) {
+            const appDiv = document.getElementById("appContainer");
+            if (!user) {
+                const autoUser = autoLoginFromRemembered();
+                if (autoUser) {
+                    currentPage = 'home';
+                    renderHomePage();
+                    return;
+                }
+                appDiv.innerHTML = `<div class="login-page"><div class="login-container"><h2>🗺️ 区域管控</h2><div class="subtitle">多品牌 · 会员制 · 智能搜索</div><div class="input-group"><span class="input-icon">👤</span><input type="text" id="loginUsername" placeholder="用户名"></div><div class="input-group"><span class="input-icon">🔒</span><input type="password" id="loginPassword" placeholder="密码"></div><div class="remember-me"><input type="checkbox" id="rememberCheckbox"> <label for="rememberCheckbox">记住我（下次自动登录）</label></div><button id="loginBtn">登 录</button><div class="switch" id="goToRegister">没有账号？点此注册</div><div id="loginError" class="error-msg"></div></div></div>`;
+                document.getElementById("loginBtn")?.addEventListener("click", () => {
+                    const u = document.getElementById("loginUsername").value;
+                    const p = document.getElementById("loginPassword").value;
+                    const remember = document.getElementById("rememberCheckbox").checked;
+                    const us = login(u, p, remember);
+                    if (us) {
+                        currentPage = 'home';
+                        renderApp(us);
+                    } else {
+                        document.getElementById("loginError").innerText = "用户名或密码错误";
+                    }
+                });
+                document.getElementById("goToRegister")?.addEventListener("click", () => {
+                    const uname = prompt("用户名:"); if (!uname) return;
+                    const pwd = prompt("密码:"); if (!pwd) return;
+                    if (register(uname, pwd)) {
+                        if (isMembershipSystemEnabled()) {
+                            alert("注册成功！您享有7天免费会员，做任务可增加会员天数。");
+                        } else {
+                            alert("注册成功！欢迎使用区域管控系统。");
+                        }
+                        currentPage = 'home';
+                        renderApp(getCurrentUser());
+                    } else alert("用户名已存在");
+                });
+                return;
+            }
+            if (currentPage === 'home') {
+                renderHomePage();
+                return;
+            }
+            const isAdmin = user.role === 'admin';
+            const membershipOn = isMembershipSystemEnabled();
+            let extraButtons = '';
+            for (let i = 0; i < 4; i++) {
+                extraButtons += `<button class="extra-btn" data-link-index="${i}">🔗 链接${i+1}</button>`;
+            }
+            const quickNavHtml = `<div class="quick-nav">
+                <button class="nav-btn" id="backHomeBtn">🏠 主页</button>
+                <button class="jump-btn active-brand" data-brand="shengshi">🏯万盛 </button>
+                <button class="jump-btn" data-brand="chuangshi">🌌 创世</button>
+                <button class="jump-btn" data-brand="wansheng">🌟 盛世</button>
+                <button class="jump-btn" data-brand="jiasheng">🏆 嘉盛</button>
+                <button class="mall-btn" id="mallBtn">🛒 商城</button>
+                ${extraButtons}
+                ${(!isAdmin && membershipOn) ? '<button class="vip-btn" id="openVipBtn">💎 开通会员</button>' : ''}
+            </div>`;
+            const adminBrandSelector = isAdmin ? `<div class="brand-selector">
+                <button class="active-brand" data-brand="shengshi">盛世</button>
+                <button data-brand="chuangshi">创世</button>
+                <button data-brand="wansheng">万盛</button>
+                <button data-brand="jiasheng">嘉盛</button>
+            </div>` : '';
+            appDiv.innerHTML = `
+                <div class="app-wrapper">
+                    <div class="app-header"><h2>🗺️ 区域管控系统 · ${isAdmin?'管理员':'普通用户'} (${BRAND_NAMES[currentBrand]})</h2><div class="user-info"><span>👤 ${user.username} ${user.membership?'<span class="vip-badge">💎会员</span>':''} ${(!user.membership && isMembershipSystemEnabled() && user.freeTrialEnd > Date.now())?'<span class="trial-badge">🎁试用会员</span>':''}</span><button class="logout-btn" id="logoutBtn">退出</button></div></div>
+                    ${quickNavHtml}
+                    <div class="global-search"><input type="text" id="globalSearchInput" placeholder="搜索当前品牌区域名称"><button id="searchBtn">🔍 搜索</button></div>
+                    <div id="searchResultsContainer"></div>
+                    ${isAdmin ? `<div class="mode-bar"><button class="mode-btn active" id="adminModeBtn">👑 后台管理</button><button class="mode-btn" id="frontendModeBtn">🏠 前台用户</button></div>` : `<div class="mode-bar"><div style="width:100%;text-align:center;color:#aaa;">普通用户 - 完整管控权限</div></div>`}
+                    <div id="adminView" style="display:${isAdmin?'block':'none'};">
+                        <div class="admin-tabs">
+                            <button class="admin-tab active" data-tab="region">🗺️ 区域管控</button>
+                            <button class="admin-tab" data-tab="audit">📋 改名审核</button>
+                            <button class="admin-tab" data-tab="user">👥 用户管理</button>
+                            <button class="admin-tab" data-tab="profile">🔐 个人设置</button>
+                            <button class="admin-tab" data-tab="homeSettings">🏠 主页设置</button>
+                            <button class="admin-tab" data-tab="announcement">📢 公告设置</button>
+                            <button class="admin-tab" data-tab="logs">📜 修改日志 <span id="logBadge" class="badge" style="display:none;">0</span></button>
+                            ${adminBrandSelector}
+                        </div>
+                        <div id="regionTab" style="display:block;"><div id="adminMainGrid" class="main-grid"></div><div id="adminLevelContainer" style="display:none;"></div></div>
+                        <div id="auditTab" style="display:none;"><div class="audit-panel"><h3>📋 待审核申请</h3><div id="auditList">加载中...</div></div></div>
+                        <div id="userTab" style="display:none;"><div class="user-panel"><h3>👥 用户管理</h3><div id="userPanelList">加载中...</div><div style="margin-top:15px;"><button id="addUserBtn" class="btn-primary">➕ 添加新用户</button></div></div></div>
+                        <div id="profileTab" style="display:none;"><div id="profilePanel"></div></div>
+                        <div id="homeSettingsTab" style="display:none;"><div id="homeSettingsContainer"></div></div>
+                        <div id="announcementTab" style="display:none;"><div id="announcementPanel"></div></div>
+                        <div id="logsTab" style="display:none;"><div id="logsPanel"></div></div>
+                    </div>
+                    <div id="frontendView" style="display:${isAdmin?'none':'block'};"><h3>🏢 ${BRAND_NAMES[currentBrand]} 前台信息平台</h3><div id="frontendMainGrid" class="main-grid"></div><div id="frontendLevelContainer" style="display:none;"></div><div class="reminder-note">💡 您拥有完整管控权限（封禁/解禁/添加/删除/修改天数/调整时间），所有操作会被记录。（区县级以下自动变为条形列表）</div></div>
+                </div>
+            `;
+            document.getElementById("backHomeBtn")?.addEventListener("click", () => {
+                currentPage = 'home';
+                renderApp(getCurrentUser());
+            });
+            document.querySelectorAll(".quick-nav .jump-btn").forEach(btn => {
+                btn.addEventListener("click", () => { const brand = btn.dataset.brand; if (brand !== currentBrand) switchBrand(brand); });
+            });
+            document.querySelectorAll(".brand-selector button").forEach(btn => {
+                btn.addEventListener("click", () => { const brand = btn.dataset.brand; if (brand !== currentBrand) switchBrand(brand); });
+            });
+            document.getElementById("mallBtn")?.addEventListener("click", () => {
+                const url = getMallUrl();
+                if(url && url !== '#') window.open(url, '_blank');
+                else alert("商城链接尚未配置，请联系管理员。");
+            });
+            document.querySelectorAll(".extra-btn").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const index = parseInt(btn.dataset.linkIndex);
+                    const url = getExtraLink(index);
+                    if (url && url.trim() !== '') {
+                        window.open(url, '_blank');
+                    } else {
+                        alert(`链接${index+1}未配置，请在后台用户管理页面底部设置。`);
+                    }
+                });
+            });
+            if (!isAdmin && membershipOn) {
+                document.getElementById("openVipBtn")?.addEventListener("click", showMembershipModal);
+            }
+            if (isAdmin) {
+                renderAdminMainPanel(); renderAuditPanel(); renderUserPanel(); renderProfilePanel(); renderLogsPanel(); renderAnnouncementPanel();
+                updateLogBadge();
+                setInterval(() => {
+                    if (document.getElementById("logsTab") && document.getElementById("logsTab").style.display !== "block") {
+                        updateLogBadge();
+                    }
+                }, 30000);
+                document.getElementById("addUserBtn")?.addEventListener("click", () => {
+                    const newName = prompt("新用户名:"); if (!newName) return;
+                    const newPwd = prompt("密码:"); if (!newPwd) return;
+                    if (register(newName, newPwd, "user")) { alert("添加成功，新用户享有7天免费试用。"); renderUserPanel(); }
+                    else alert("用户名已存在");
+                });
+                document.querySelectorAll(".admin-tab").forEach(tab => {
+                    tab.addEventListener("click", () => {
+                        const target = tab.dataset.tab;
+                        document.getElementById("regionTab").style.display = target === 'region' ? 'block' : 'none';
+                        document.getElementById("auditTab").style.display = target === 'audit' ? 'block' : 'none';
+                        document.getElementById("userTab").style.display = target === 'user' ? 'block' : 'none';
+                        document.getElementById("profileTab").style.display = target === 'profile' ? 'block' : 'none';
+                        document.getElementById("homeSettingsTab").style.display = target === 'homeSettings' ? 'block' : 'none';
+                        document.getElementById("announcementTab").style.display = target === 'announcement' ? 'block' : 'none';
+                        document.getElementById("logsTab").style.display = target === 'logs' ? 'block' : 'none';
+                        document.querySelectorAll(".admin-tab").forEach(t => t.classList.remove("active"));
+                        tab.classList.add("active");
+                        if (target === 'user') renderUserPanel();
+                        if (target === 'profile') renderProfilePanel();
+                        if (target === 'homeSettings') renderHomeSettingsPanel();
+                        if (target === 'announcement') renderAnnouncementPanel();
+                        if (target === 'logs') renderLogsPanel();
+                    });
+                });
+                document.getElementById("adminModeBtn")?.addEventListener("click", () => { 
+                    document.getElementById("adminView").style.display="block"; 
+                    document.getElementById("frontendView").style.display="none"; 
+                    document.getElementById("adminModeBtn").classList.add("active"); 
+                    document.getElementById("frontendModeBtn").classList.remove("active"); 
+                });
+                document.getElementById("frontendModeBtn")?.addEventListener("click", () => { 
+                    document.getElementById("adminView").style.display="none"; 
+                    document.getElementById("frontendView").style.display="block"; 
+                    document.getElementById("frontendModeBtn").classList.add("active"); 
+                    document.getElementById("adminModeBtn").classList.remove("active"); 
+                    renderFrontendMainPanel(); 
+                });
+            }
+            renderFrontendMainPanel();
+            document.getElementById("logoutBtn")?.addEventListener("click", logout);
+            document.getElementById("searchBtn")?.addEventListener("click", () => showSearchResults(document.getElementById("globalSearchInput").value));
+            document.getElementById("globalSearchInput")?.addEventListener("keypress", (e) => { if (e.key === 'Enter') showSearchResults(e.target.value); });
+            setInterval(() => {
+                if (currentFrontAreaId) refreshFrontendSubGrid();
+                if (isAdmin && currentAdminAreaId) refreshAdminSubGrid();
+                const cur = getCurrentUser(); if (cur) updateActiveTime(cur.username);
+            }, 5000);
+        }
+
+        function getNextId(list) { return list.length === 0 ? 1 : Math.max(...list.map(i => i.id)) + 1; }
+
+        initStorage();
+        const initialUser = getCurrentUser() || autoLoginFromRemembered();
+        if (initialUser && getCurrentUser()) {
+            renderHomePage();
+        } else {
+            renderApp(null);
+        }
+    })();
+</script>
+</body>
+</html>
